@@ -1,13 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, Crown, CalendarDays, Sparkles, Gift, Package,
-  Wine, Settings, MessageSquare, CreditCard, Smartphone, LogOut,
+  Wine, Settings, MessageSquare, CreditCard, Smartphone, LogOut, UserPlus,
 } from "lucide-react";
 import { useSession } from "@/lib/session";
 import { NAV_BY_ROLE, ROLE_LABEL, type NavKey } from "@/lib/permissions";
 
 const ITEMS: Record<NavKey, { title: string; url: string; icon: any }> = {
   dashboard:   { title: "Dashboard",        url: "/dashboard",    icon: LayoutDashboard },
+  registry:    { title: "The Registry",     url: "/registry",     icon: UserPlus },
   clients:     { title: "All Clients",      url: "/clients",      icon: Users },
   founders:    { title: "The Circle",       url: "/founders",     icon: Crown },
   appointments:{ title: "Appointments",     url: "/appointments", icon: CalendarDays },
