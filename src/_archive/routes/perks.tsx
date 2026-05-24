@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, AlertTriangle, Trophy, Sparkles, Bell, Clock, Plane, Cake, Wrench, Gift } from "lucide-react";
@@ -7,13 +6,12 @@ import { Layout, PageHeader } from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-export const Route = createFileRoute("/perks")({ component: PerksAnalyticsPage });
 
 const FOUNDER_FEE = 25000;
 const SERVICE_COST = 1500;
 const SURPRISE_AVG_COST = 2000;
 
-function PerksAnalyticsPage() {
+export function PerksAnalyticsPage() {
   return (
     <Layout>
       <PageHeader

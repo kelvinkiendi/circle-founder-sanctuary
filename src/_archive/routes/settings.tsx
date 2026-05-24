@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -36,15 +35,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export const Route = createFileRoute("/settings")({
-  component: SettingsPage,
-  head: () => ({
-    meta: [
-      { title: "Admin Settings · COTERIE" },
-      { name: "description", content: "Business info, founder rules, staff, notifications, integrations." },
-    ],
-  }),
-});
 
 // ---------- Helpers ----------
 function useSetting<T = any>(key: string) {
@@ -107,7 +97,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 // ---------- Page ----------
-function SettingsPage() {
+export function SettingsPage() {
   return (
     <Layout>
       <PageHeader

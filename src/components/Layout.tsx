@@ -1,16 +1,25 @@
-import { ReactNode } from "react";
+import { ReactNode, createContext, useContext } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { TopBar } from "./TopBar";
 
+// When Layout is mounted inside another Layout (via lifted/archived pages
+// rendered as portal tabs), collapse the inner one to a passthrough so we
+// don't get duplicate sidebars / topbars.
+const LayoutMountedContext = createContext(false);
+
 export function Layout({ children }: { children: ReactNode }) {
+  const alreadyMounted = useContext(LayoutMountedContext);
+  if (alreadyMounted) return <>{children}</>;
   return (
-    <div className="min-h-screen flex w-full bg-background">
-      <AppSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopBar />
-        <main className="flex-1 p-6 md:p-10">{children}</main>
+    <LayoutMountedContext.Provider value={true}>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopBar />
+          <main className="flex-1 p-6 md:p-10">{children}</main>
+        </div>
       </div>
-    </div>
+    </LayoutMountedContext.Provider>
   );
 }
 

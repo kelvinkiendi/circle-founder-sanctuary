@@ -1,25 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Layout, PageHeader } from "@/components/Layout";
-import { RequireRole, useSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { WHATSAPP_TEMPLATES } from "@/lib/whatsapp-templates";
 import { normalizeKePhone } from "@/lib/phone";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/Layout";
 import {
   UserPlus, Upload, Search, Download, X, Loader2, CheckCircle2,
   AlertTriangle, Crown, MessageSquare, History, Calendar,
 } from "lucide-react";
-
-export const Route = createFileRoute("/registry")({
-  component: () => (
-    <RequireRole roles={["admin", "manager", "reception"]}>
-      <Layout><Registry /></Layout>
-    </RequireRole>
-  ),
-  ssr: false,
-});
 
 type ClientRow = {
   id: string;
@@ -41,7 +31,7 @@ type ClientRow = {
 
 const REFERRAL_SOURCES = ["Instagram", "Referral", "Walk-in", "Google", "Friend", "Other"];
 
-function Registry() {
+export function Registry() {
   const { session } = useSession();
   const canBulkImport = session?.role === "admin" || session?.role === "manager";
   const canEnrollFounder = session?.role === "admin";

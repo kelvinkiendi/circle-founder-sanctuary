@@ -42,6 +42,24 @@ export const Route = createFileRoute("/api/public/mpesa/callback")({
                 amount_ksh: payment.amount_ksh,
                 description: payment.description,
               });
+              // Queue a WhatsApp confirmation row (real delivery handled by WhatsApp worker)
+              const { data: client } = await supabaseAdmin
+                .from("clients").select("full_name").eq("id", payment.client_id).single();
+              const name = client?.full_name?.split(" ")[0] ?? "there";
+              await supabaseAdmin.from("whatsapp_messages").insert({
+                client_id: payment.client_id,
+                template_key: "payment_confirmation",
+                body: `Thank you ${name}. We've received ${payment.amount_ksh} KSH. M-Pesa receipt: ${receipt}. — COTERIE`,
+                status: "sent",
+                created_by: "system:mpesa",
+              });
+              await supabaseAdmin.from("activity_log").insert({
+                action: "payment_paid",
+                entity: "payment",
+                entity_id: payment.id,
+                actor: "system:mpesa",
+                metadata: { receipt, amount: payment.amount_ksh },
+              });
             }
           } else {
             await supabaseAdmin

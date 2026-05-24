@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession as useSessionCtx, RequireRole as RequireRoleCtx } from "@/lib/session";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,17 +34,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-export const Route = createFileRoute("/tech")({
-  component: TechView,
-  ssr: false,
-  head: () => ({
-    meta: [
-      { title: "Technician View · COTERIE" },
-      { name: "description", content: "Mobile-first day-of schedule for COTERIE nail technicians." },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1" },
-    ],
-  }),
-});
 
 // ---------- Types ----------
 type Appt = {
@@ -287,7 +275,7 @@ function SwipeCard({
 }
 
 // ---------- Main view ----------
-function TechView() {
+export function TechView() {
   const { session, logout } = useSessionCtx();
   if (!session) {
     if (typeof window !== "undefined") window.location.href = "/";

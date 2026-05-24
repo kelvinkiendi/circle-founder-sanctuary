@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -50,9 +49,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
-export const Route = createFileRoute("/founders")({
-  component: FoundersPage,
-});
 
 const TOTAL_SLOTS = 25;
 const TERM_WEEKS = 26;
@@ -91,7 +87,7 @@ function fmtDate(d?: string | null) {
   return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function FoundersPage() {
+export function FoundersPage() {
   const [selected, setSelected] = useState<Founder | null>(null);
   const [enrollOpen, setEnrollOpen] = useState(false);
 
