@@ -478,7 +478,8 @@ function BulkImport({ onDone }: { onDone: () => void }) {
   const [fileName, setFileName] = useState("");
   const [existing, setExisting] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ added: number; skipped: number; errors: number } | null>(null);
+  const [dupMode, setDupMode] = useState<"skip" | "update">("skip");
+  const [result, setResult] = useState<{ added: number; updated: number; skipped: number; errors: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
