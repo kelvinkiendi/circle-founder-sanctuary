@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSession as useSessionCtx, RequireRole as RequireRoleCtx } from "@/lib/session";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ import {
 
 export const Route = createFileRoute("/tech")({
   component: TechView,
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Technician View · COTERIE" },
@@ -286,9 +288,16 @@ function SwipeCard({
 
 // ---------- Main view ----------
 function TechView() {
-  const { tech, login, logout } = usePinSession();
-  if (!tech) return <PinScreen onLogin={login} />;
-  return <Schedule tech={tech} onLogout={logout} />;
+  const { session, logout } = useSessionCtx();
+  if (!session) {
+    if (typeof window !== "undefined") window.location.href = "/";
+    return null;
+  }
+  return (
+    <RequireRoleCtx roles={["technician","admin"]}>
+      <Schedule tech={session.fullName} onLogout={logout} />
+    </RequireRoleCtx>
+  );
 }
 
 function Schedule({ tech, onLogout }: { tech: string; onLogout: () => void }) {

@@ -16,12 +16,18 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PerksRouteImport } from './routes/perks'
 import { Route as PaymentsRouteImport } from './routes/payments'
+import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as FoundersRouteImport } from './routes/founders'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ClientsRouteImport } from './routes/clients'
+import { Route as ChangePinRouteImport } from './routes/change-pin'
 import { Route as BrunchRouteImport } from './routes/brunch'
 import { Route as AppointmentsRouteImport } from './routes/appointments'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ReceiptsIdRouteImport } from './routes/receipts.$id'
+import { Route as GuardianViewRouteImport } from './routes/guardian.view'
+import { Route as ConciergeDeskRouteImport } from './routes/concierge.desk'
+import { Route as ArtisanTodayRouteImport } from './routes/artisan.today'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa.callback'
 
 const WhatsappRoute = WhatsappRouteImport.update({
@@ -59,14 +65,29 @@ const PaymentsRoute = PaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerRoute = ManagerRouteImport.update({
+  id: '/manager',
+  path: '/manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FoundersRoute = FoundersRouteImport.update({
   id: '/founders',
   path: '/founders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClientsRoute = ClientsRouteImport.update({
   id: '/clients',
   path: '/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangePinRoute = ChangePinRouteImport.update({
+  id: '/change-pin',
+  path: '/change-pin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrunchRoute = BrunchRouteImport.update({
@@ -89,6 +110,21 @@ const ReceiptsIdRoute = ReceiptsIdRouteImport.update({
   path: '/receipts/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuardianViewRoute = GuardianViewRouteImport.update({
+  id: '/guardian/view',
+  path: '/guardian/view',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConciergeDeskRoute = ConciergeDeskRouteImport.update({
+  id: '/concierge/desk',
+  path: '/concierge/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArtisanTodayRoute = ArtisanTodayRouteImport.update({
+  id: '/artisan/today',
+  path: '/artisan/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
   id: '/api/public/mpesa/callback',
   path: '/api/public/mpesa/callback',
@@ -99,8 +135,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/appointments': typeof AppointmentsRoute
   '/brunch': typeof BrunchRoute
+  '/change-pin': typeof ChangePinRoute
   '/clients': typeof ClientsRoute
+  '/dashboard': typeof DashboardRoute
   '/founders': typeof FoundersRoute
+  '/manager': typeof ManagerRoute
   '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
@@ -108,6 +147,9 @@ export interface FileRoutesByFullPath {
   '/surprises': typeof SurprisesRoute
   '/tech': typeof TechRoute
   '/whatsapp': typeof WhatsappRoute
+  '/artisan/today': typeof ArtisanTodayRoute
+  '/concierge/desk': typeof ConciergeDeskRoute
+  '/guardian/view': typeof GuardianViewRoute
   '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
@@ -115,8 +157,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/appointments': typeof AppointmentsRoute
   '/brunch': typeof BrunchRoute
+  '/change-pin': typeof ChangePinRoute
   '/clients': typeof ClientsRoute
+  '/dashboard': typeof DashboardRoute
   '/founders': typeof FoundersRoute
+  '/manager': typeof ManagerRoute
   '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
@@ -124,6 +169,9 @@ export interface FileRoutesByTo {
   '/surprises': typeof SurprisesRoute
   '/tech': typeof TechRoute
   '/whatsapp': typeof WhatsappRoute
+  '/artisan/today': typeof ArtisanTodayRoute
+  '/concierge/desk': typeof ConciergeDeskRoute
+  '/guardian/view': typeof GuardianViewRoute
   '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
@@ -132,8 +180,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/appointments': typeof AppointmentsRoute
   '/brunch': typeof BrunchRoute
+  '/change-pin': typeof ChangePinRoute
   '/clients': typeof ClientsRoute
+  '/dashboard': typeof DashboardRoute
   '/founders': typeof FoundersRoute
+  '/manager': typeof ManagerRoute
   '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
@@ -141,6 +192,9 @@ export interface FileRoutesById {
   '/surprises': typeof SurprisesRoute
   '/tech': typeof TechRoute
   '/whatsapp': typeof WhatsappRoute
+  '/artisan/today': typeof ArtisanTodayRoute
+  '/concierge/desk': typeof ConciergeDeskRoute
+  '/guardian/view': typeof GuardianViewRoute
   '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
@@ -150,8 +204,11 @@ export interface FileRouteTypes {
     | '/'
     | '/appointments'
     | '/brunch'
+    | '/change-pin'
     | '/clients'
+    | '/dashboard'
     | '/founders'
+    | '/manager'
     | '/payments'
     | '/perks'
     | '/products'
@@ -159,6 +216,9 @@ export interface FileRouteTypes {
     | '/surprises'
     | '/tech'
     | '/whatsapp'
+    | '/artisan/today'
+    | '/concierge/desk'
+    | '/guardian/view'
     | '/receipts/$id'
     | '/api/public/mpesa/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -166,8 +226,11 @@ export interface FileRouteTypes {
     | '/'
     | '/appointments'
     | '/brunch'
+    | '/change-pin'
     | '/clients'
+    | '/dashboard'
     | '/founders'
+    | '/manager'
     | '/payments'
     | '/perks'
     | '/products'
@@ -175,6 +238,9 @@ export interface FileRouteTypes {
     | '/surprises'
     | '/tech'
     | '/whatsapp'
+    | '/artisan/today'
+    | '/concierge/desk'
+    | '/guardian/view'
     | '/receipts/$id'
     | '/api/public/mpesa/callback'
   id:
@@ -182,8 +248,11 @@ export interface FileRouteTypes {
     | '/'
     | '/appointments'
     | '/brunch'
+    | '/change-pin'
     | '/clients'
+    | '/dashboard'
     | '/founders'
+    | '/manager'
     | '/payments'
     | '/perks'
     | '/products'
@@ -191,6 +260,9 @@ export interface FileRouteTypes {
     | '/surprises'
     | '/tech'
     | '/whatsapp'
+    | '/artisan/today'
+    | '/concierge/desk'
+    | '/guardian/view'
     | '/receipts/$id'
     | '/api/public/mpesa/callback'
   fileRoutesById: FileRoutesById
@@ -199,8 +271,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppointmentsRoute: typeof AppointmentsRoute
   BrunchRoute: typeof BrunchRoute
+  ChangePinRoute: typeof ChangePinRoute
   ClientsRoute: typeof ClientsRoute
+  DashboardRoute: typeof DashboardRoute
   FoundersRoute: typeof FoundersRoute
+  ManagerRoute: typeof ManagerRoute
   PaymentsRoute: typeof PaymentsRoute
   PerksRoute: typeof PerksRoute
   ProductsRoute: typeof ProductsRoute
@@ -208,6 +283,9 @@ export interface RootRouteChildren {
   SurprisesRoute: typeof SurprisesRoute
   TechRoute: typeof TechRoute
   WhatsappRoute: typeof WhatsappRoute
+  ArtisanTodayRoute: typeof ArtisanTodayRoute
+  ConciergeDeskRoute: typeof ConciergeDeskRoute
+  GuardianViewRoute: typeof GuardianViewRoute
   ReceiptsIdRoute: typeof ReceiptsIdRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
 }
@@ -263,6 +341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager': {
+      id: '/manager'
+      path: '/manager'
+      fullPath: '/manager'
+      preLoaderRoute: typeof ManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/founders': {
       id: '/founders'
       path: '/founders'
@@ -270,11 +355,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FoundersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clients': {
       id: '/clients'
       path: '/clients'
       fullPath: '/clients'
       preLoaderRoute: typeof ClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/change-pin': {
+      id: '/change-pin'
+      path: '/change-pin'
+      fullPath: '/change-pin'
+      preLoaderRoute: typeof ChangePinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/brunch': {
@@ -305,6 +404,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReceiptsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/guardian/view': {
+      id: '/guardian/view'
+      path: '/guardian/view'
+      fullPath: '/guardian/view'
+      preLoaderRoute: typeof GuardianViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/concierge/desk': {
+      id: '/concierge/desk'
+      path: '/concierge/desk'
+      fullPath: '/concierge/desk'
+      preLoaderRoute: typeof ConciergeDeskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/artisan/today': {
+      id: '/artisan/today'
+      path: '/artisan/today'
+      fullPath: '/artisan/today'
+      preLoaderRoute: typeof ArtisanTodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mpesa/callback': {
       id: '/api/public/mpesa/callback'
       path: '/api/public/mpesa/callback'
@@ -319,8 +439,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppointmentsRoute: AppointmentsRoute,
   BrunchRoute: BrunchRoute,
+  ChangePinRoute: ChangePinRoute,
   ClientsRoute: ClientsRoute,
+  DashboardRoute: DashboardRoute,
   FoundersRoute: FoundersRoute,
+  ManagerRoute: ManagerRoute,
   PaymentsRoute: PaymentsRoute,
   PerksRoute: PerksRoute,
   ProductsRoute: ProductsRoute,
@@ -328,6 +451,9 @@ const rootRouteChildren: RootRouteChildren = {
   SurprisesRoute: SurprisesRoute,
   TechRoute: TechRoute,
   WhatsappRoute: WhatsappRoute,
+  ArtisanTodayRoute: ArtisanTodayRoute,
+  ConciergeDeskRoute: ConciergeDeskRoute,
+  GuardianViewRoute: GuardianViewRoute,
   ReceiptsIdRoute: ReceiptsIdRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
 }

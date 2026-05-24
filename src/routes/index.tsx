@@ -1,141 +1,147 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Users, Crown, CalendarDays, Sparkles, Clock, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { Layout, PageHeader } from "@/components/Layout";
-import { StatCard } from "@/components/StatCard";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Delete } from "lucide-react";
+import { loginWithPin } from "@/lib/auth.functions";
+import { useSession } from "@/lib/session";
+import { PORTAL_PATH, type StaffRole } from "@/lib/permissions";
 
 export const Route = createFileRoute("/")({
-  component: Dashboard,
+  component: LoginPage,
+  ssr: false,
 });
 
-function startOfWeek() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+function LoginPage() {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [welcome, setWelcome] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [shake, setShake] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+  const { session, setSession, loading } = useSession();
 
-function Dashboard() {
-  const { data: stats } = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
-      const weekStart = startOfWeek().toISOString().slice(0, 10);
+  useEffect(() => { setMounted(true); }, []);
 
-      const [clients, founders, todayAppts, weeklyRefresh, upcoming] = await Promise.all([
-        supabase.from("clients").select("*", { count: "exact", head: true }),
-        supabase
-          .from("founder_circle")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "active"),
-        supabase
-          .from("appointments")
-          .select("id, scheduled_time, appointment_type, location, status, clients(full_name)")
-          .eq("scheduled_date", today)
-          .order("scheduled_time"),
-        supabase
-          .from("perks_usage")
-          .select("*", { count: "exact", head: true })
-          .eq("perk_type", "weekly_refresh")
-          .eq("status", "used")
-          .gte("used_date", weekStart),
-        supabase
-          .from("appointments")
-          .select("id, scheduled_date, scheduled_time, appointment_type, clients(full_name)")
-          .gte("scheduled_date", today)
-          .order("scheduled_date")
-          .limit(5),
-      ]);
+  // If already logged in, bounce to portal
+  useEffect(() => {
+    if (loading || !session) return;
+    if (session.mustChangePin) router.navigate({ to: "/change-pin" });
+    else router.navigate({ to: PORTAL_PATH[session.role] as any });
+  }, [session, loading, router]);
 
-      return {
-        clientsCount: clients.count ?? 0,
-        foundersCount: founders.count ?? 0,
-        todayAppointments: todayAppts.data ?? [],
-        weeklyRefreshCount: weeklyRefresh.count ?? 0,
-        upcoming: upcoming.data ?? [],
-      };
-    },
-  });
+  useEffect(() => {
+    if (pin.length !== 4 || busy) return;
+    const submit = async () => {
+      setBusy(true); setError(null);
+      try {
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent : undefined;
+        const res = await loginWithPin({ data: { pin, userAgent: ua, device: deviceLabel() } });
+        if (!res.ok) {
+          setShake(true); setError("Invalid PIN"); setPin("");
+          setTimeout(() => setShake(false), 500);
+        } else {
+          const role = res.role as StaffRole;
+          setSession({
+            sessionId: res.sessionId, staffId: res.staffId,
+            fullName: res.fullName, role,
+            mustChangePin: res.mustChangePin, lastLoginAt: res.lastLoginAt,
+          });
+          setWelcome(`Welcome, ${res.fullName.split(" ")[0]}`);
+          setTimeout(() => {
+            if (res.mustChangePin) router.navigate({ to: "/change-pin" });
+            else router.navigate({ to: PORTAL_PATH[role] as any });
+          }, 700);
+        }
+      } catch (e: any) {
+        setError(e?.message ?? "Login failed");
+        setShake(true); setPin("");
+        setTimeout(() => setShake(false), 500);
+      } finally { setBusy(false); }
+    };
+    submit();
+  }, [pin, busy, setSession, router]);
+
+  const press = (d: string) => { if (pin.length < 4 && !welcome) setPin((p) => p + d); };
+  const back = () => setPin((p) => p.slice(0, -1));
+  const clear = () => setPin("");
 
   return (
-    <Layout>
-      <PageHeader
-        eyebrow="The Sanctuary · Today"
-        title="Good morning, Atelier."
-        description="A quiet snapshot of The Circle and the day's rituals at COTERIE."
-      />
+    <div className="min-h-screen w-full flex flex-col items-center justify-center px-6 py-10" style={{ background: "#5D4037", color: "#F5F5DC" }}>
+      <div className={`w-full max-w-sm transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}>
+        <div className="text-center mb-10">
+          <div className="font-display text-5xl tracking-[0.35em]" style={{ color: "#F5F5DC" }}>COTERIE</div>
+          <div className="mt-3 text-[10px] tracking-[0.5em]" style={{ color: "#F5F5DC", opacity: 0.65 }}>NAIL SANCTUARY</div>
+          <h1 className="mt-8 font-display text-3xl tracking-[0.25em]" style={{ color: "#F5F5DC" }}>THE CIRCLE</h1>
+          <p className="mt-3 text-xs tracking-[0.2em] uppercase" style={{ color: "#F5F5DC", opacity: 0.7 }}>POS System</p>
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-        <StatCard label="Total Clients" value={stats?.clientsCount ?? "—"} hint="Across the entire sanctuary" icon={Users} />
-        <StatCard label="Active Founders" value={`${stats?.foundersCount ?? 0} / 25`} hint="Seats in The Circle" icon={Crown} accent="gold" />
-        <StatCard label="Today's Appointments" value={stats?.todayAppointments.length ?? 0} hint="Scheduled rituals today" icon={CalendarDays} />
-        <StatCard label="Weekly Refreshes" value={stats?.weeklyRefreshCount ?? 0} hint="Used this week by founders" icon={Sparkles} accent="gold" />
+        <div className="text-center text-xs tracking-[0.25em] uppercase mb-4" style={{ color: "#F5F5DC", opacity: 0.75 }}>
+          Enter your 4-digit access code
+        </div>
+
+        <div className={`flex justify-center gap-4 mb-2 ${shake ? "animate-[shake_0.4s_ease-in-out]" : ""}`}>
+          {[0,1,2,3].map((i) => (
+            <div key={i} className="w-4 h-4 rounded-full border" style={{
+              borderColor: "#F5F5DC",
+              background: pin.length > i ? "#F5F5DC" : "transparent",
+            }} />
+          ))}
+        </div>
+
+        <div className="h-5 text-center text-xs mt-2 mb-4" style={{ color: welcome ? "#F5F5DC" : "#f8a8a8" }}>
+          {welcome ?? error ?? ""}
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {["1","2","3","4","5","6","7","8","9"].map((d) => (
+            <PadButton key={d} onClick={() => press(d)} disabled={busy || !!welcome}>{d}</PadButton>
+          ))}
+          <PadButton onClick={clear} disabled={busy || !!welcome} small>Clear</PadButton>
+          <PadButton onClick={() => press("0")} disabled={busy || !!welcome}>0</PadButton>
+          <PadButton onClick={back} disabled={busy || !!welcome} small><Delete className="h-5 w-5 mx-auto" /></PadButton>
+        </div>
+
+        <p className="text-center text-[10px] tracking-[0.3em] uppercase mt-10" style={{ color: "#F5F5DC", opacity: 0.45 }}>
+          The Circle · Staff Only
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-card border border-border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-display text-2xl">Today's Rituals</h2>
-            <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
-              {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-            </span>
-          </div>
-          {stats?.todayAppointments.length ? (
-            <ul className="divide-y divide-border">
-              {stats.todayAppointments.map((a: any) => (
-                <li key={a.id} className="py-3 flex items-center gap-4">
-                  <div className="text-sm font-medium w-16 text-primary">{a.scheduled_time?.slice(0, 5)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{a.clients?.full_name ?? "Guest"}</div>
-                    <div className="text-xs text-muted-foreground capitalize">{a.appointment_type?.replace(/_/g, " ")}</div>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground capitalize">
-                    {a.location === "travel" ? <MapPin className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                    {a.location}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState text="No rituals scheduled today. A quiet day in the sanctuary." />
-          )}
-        </section>
-
-        <section className="bg-card border border-border rounded-lg p-6">
-          <h2 className="font-display text-2xl mb-5">Coming Up</h2>
-          {stats?.upcoming.length ? (
-            <ul className="divide-y divide-border">
-              {stats.upcoming.map((a: any) => (
-                <li key={a.id} className="py-3 flex items-center gap-4">
-                  <div className="w-14 text-center">
-                    <div className="text-xs uppercase text-muted-foreground">
-                      {new Date(a.scheduled_date).toLocaleDateString(undefined, { month: "short" })}
-                    </div>
-                    <div className="font-display text-xl text-primary leading-none">
-                      {new Date(a.scheduled_date).getDate()}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{a.clients?.full_name ?? "Guest"}</div>
-                    <div className="text-xs text-muted-foreground capitalize">
-                      {a.appointment_type?.replace(/_/g, " ")} · {a.scheduled_time?.slice(0, 5)}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState text="No upcoming appointments on the books." />
-          )}
-        </section>
-      </div>
-    </Layout>
+      <style>{`
+        @keyframes shake {
+          0%,100% { transform: translateX(0); }
+          25% { transform: translateX(-8px); }
+          50% { transform: translateX(8px); }
+          75% { transform: translateX(-4px); }
+        }
+      `}</style>
+    </div>
   );
 }
 
-function EmptyState({ text }: { text: string }) {
-  return <div className="py-12 text-center text-sm text-muted-foreground italic">{text}</div>;
+function PadButton({ children, onClick, disabled, small }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; small?: boolean }) {
+  return (
+    <button
+      type="button" onClick={onClick} disabled={disabled}
+      className="aspect-square rounded-full font-display text-2xl transition-all active:scale-95 disabled:opacity-40"
+      style={{
+        background: "rgba(245,245,220,0.08)",
+        color: "#F5F5DC",
+        border: "1px solid rgba(245,245,220,0.25)",
+        fontSize: small ? "0.75rem" : undefined,
+        letterSpacing: small ? "0.2em" : undefined,
+        textTransform: small ? "uppercase" : "none",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function deviceLabel(): string {
+  if (typeof navigator === "undefined") return "unknown";
+  const ua = navigator.userAgent;
+  if (/iPad/.test(ua)) return "iPad";
+  if (/iPhone/.test(ua)) return "iPhone";
+  if (/Android/.test(ua)) return "Android";
+  return "Desktop";
 }
