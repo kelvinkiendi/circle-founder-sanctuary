@@ -265,7 +265,7 @@ async function sendWelcome(c: ClientRow) {
 async function upgradeToFounder(c: ClientRow) {
   const ok = window.confirm(`Upgrade ${c.full_name} to Founder Circle? This opens enrollment.`);
   if (!ok) return;
-  window.location.href = `/founders?upgrade=${c.id}`;
+  window.location.href = `/concierge/desk?tab=founders&upgrade=${c.id}`;
 }
 
 /* ---------------- Quick Add / Edit ---------------- */
