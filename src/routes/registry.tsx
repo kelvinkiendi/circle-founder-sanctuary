@@ -576,7 +576,7 @@ function BulkImport({ onDone }: { onDone: () => void }) {
         email: r.email || null,
         birthday: r.birthday || null,
         address: r.address || null,
-        client_type: r.client_type === "founder" || r.client_type === "prospect" ? r.client_type : "regular",
+        client_type: (r.client_type === "founder" || r.client_type === "prospect" ? r.client_type : "regular") as "regular" | "prospect" | "founder",
         notes: r.notes || null,
         first_visit_date: r.first_visit_date || null,
       }));
