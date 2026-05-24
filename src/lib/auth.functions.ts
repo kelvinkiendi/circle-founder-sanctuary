@@ -13,8 +13,8 @@ export const loginWithPin = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: rows, error } = await supabaseAdmin.rpc("verify_staff_pin", {
       p_pin: data.pin,
-      p_device: data.device ?? null,
-      p_user_agent: data.userAgent ?? null,
+      p_device: data.device ?? undefined,
+      p_user_agent: data.userAgent ?? undefined,
     });
     if (error) throw new Error(error.message);
     const row = Array.isArray(rows) ? rows[0] : rows;
