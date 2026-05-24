@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,9 +15,8 @@ import { toast } from "sonner";
 import { WhatsAppPanel } from "@/components/WhatsAppPanel";
 import { WHATSAPP_TEMPLATES, getTemplate, type TemplateKey } from "@/lib/whatsapp-templates";
 
-export const Route = createFileRoute("/whatsapp")({ component: WhatsAppHub });
 
-function WhatsAppHub() {
+export function WhatsAppHub() {
   return (
     <Layout>
       <PageHeader

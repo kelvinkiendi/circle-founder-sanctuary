@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -14,7 +13,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
-export const Route = createFileRoute("/surprises")({ component: SurprisesPage });
 
 type SurpriseType = "surprise_full" | "random_upgrade" | "just_because";
 
@@ -43,7 +41,7 @@ function daysBetween(a: Date, b: Date) {
   return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
-function SurprisesPage() {
+export function SurprisesPage() {
   return (
     <Layout>
       <PageHeader

@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Layout, PageHeader } from "@/components/Layout";
@@ -24,7 +23,6 @@ import {
   runSuspensionSweep,
 } from "@/lib/payments.functions";
 
-export const Route = createFileRoute("/payments")({ component: PaymentsPage });
 
 type PaymentRow = {
   id: string;
@@ -57,7 +55,7 @@ function statusVariant(s: string) {
   return "secondary";
 }
 
-function PaymentsPage() {
+export function PaymentsPage() {
   const fetchSummary = useServerFn(getPaymentSummary);
   const fetchOutstanding = useServerFn(getOutstandingInstallments);
   const computeAmt = useServerFn(computePaymentAmount);

@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -13,12 +12,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-export const Route = createFileRoute("/products")({ component: ProductVaultPage });
 
 const PRELAUNCH_DAYS = 14;
 const MAX_PER_FOUNDER = 2;
 
-function ProductVaultPage() {
+export function ProductVaultPage() {
   return (
     <Layout>
       <PageHeader
