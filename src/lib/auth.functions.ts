@@ -84,3 +84,18 @@ export const adminResetPinFn = createServerFn({ method: "POST" })
     if (!ok) return { ok: false as const };
     return { ok: true as const, tempPin: newPin };
   });
+
+/** Securely hash & set a staff PIN so it works on the login screen. */
+export const setStaffPinFn = createServerFn({ method: "POST" })
+  .inputValidator((i) => z.object({
+    staffId: z.string().uuid(),
+    pin: z.string().regex(/^\d{4}$/),
+  }).parse(i))
+  .handler(async ({ data }) => {
+    const { data: ok, error } = await supabaseAdmin.rpc("set_staff_pin", {
+      p_staff_id: data.staffId, p_pin: data.pin,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: !!ok };
+  });
+
