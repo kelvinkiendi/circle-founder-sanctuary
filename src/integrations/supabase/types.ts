@@ -177,6 +177,8 @@ export type Database = {
           first_visit_date: string | null
           full_name: string
           id: string
+          last_appointment_date: string | null
+          next_visit_predicted_date: string | null
           notes: string | null
           phone: string | null
           referral_source: string | null
@@ -196,6 +198,8 @@ export type Database = {
           first_visit_date?: string | null
           full_name: string
           id?: string
+          last_appointment_date?: string | null
+          next_visit_predicted_date?: string | null
           notes?: string | null
           phone?: string | null
           referral_source?: string | null
@@ -215,6 +219,8 @@ export type Database = {
           first_visit_date?: string | null
           full_name?: string
           id?: string
+          last_appointment_date?: string | null
+          next_visit_predicted_date?: string | null
           notes?: string | null
           phone?: string | null
           referral_source?: string | null
