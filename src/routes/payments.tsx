@@ -183,7 +183,8 @@ function PaymentsPage() {
   const recent: PaymentRow[] = summary?.recent ?? [];
 
   return (
-    <Layout title="Payments" subtitle="M-Pesa STK Push · Receipts · Reconciliation">
+    <Layout>
+      <PageHeader eyebrow="The Circle" title="Payments" description="M-Pesa STK Push · Receipts · Reconciliation" />
       <div className="grid gap-4 md:grid-cols-4">
         <Card><CardHeader><CardTitle className="text-sm">Today</CardTitle></CardHeader>
           <CardContent className="text-2xl font-display">KSH {(summary?.today_total ?? 0).toLocaleString()}</CardContent></Card>
