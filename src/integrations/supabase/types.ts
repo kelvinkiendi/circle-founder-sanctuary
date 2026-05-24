@@ -123,6 +123,7 @@ export type Database = {
           service_area: string | null
           status: Database["public"]["Enums"]["client_status"]
           whatsapp_number: string | null
+          whatsapp_opt_out: boolean
         }
         Insert: {
           address?: string | null
@@ -137,6 +138,7 @@ export type Database = {
           service_area?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           whatsapp_number?: string | null
+          whatsapp_opt_out?: boolean
         }
         Update: {
           address?: string | null
@@ -151,6 +153,7 @@ export type Database = {
           service_area?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           whatsapp_number?: string | null
+          whatsapp_opt_out?: boolean
         }
         Relationships: []
       }
@@ -476,6 +479,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_messages: {
+        Row: {
+          body: string
+          client_id: string
+          created_by: string | null
+          delivered_at: string | null
+          error: string | null
+          id: string
+          read_at: string | null
+          sent_at: string
+          status: string
+          template_key: string
+        }
+        Insert: {
+          body: string
+          client_id: string
+          created_by?: string | null
+          delivered_at?: string | null
+          error?: string | null
+          id?: string
+          read_at?: string | null
+          sent_at?: string
+          status?: string
+          template_key: string
+        }
+        Update: {
+          body?: string
+          client_id?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          error?: string | null
+          id?: string
+          read_at?: string | null
+          sent_at?: string
+          status?: string
+          template_key?: string
+        }
+        Relationships: []
       }
     }
     Views: {
