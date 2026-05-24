@@ -77,6 +77,8 @@ export type Database = {
           notes: string | null
           scheduled_date: string
           scheduled_time: string
+          service_description: string | null
+          service_id: string | null
           status: Database["public"]["Enums"]["appointment_status"]
         }
         Insert: {
@@ -90,6 +92,8 @@ export type Database = {
           notes?: string | null
           scheduled_date: string
           scheduled_time: string
+          service_description?: string | null
+          service_id?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
         }
         Update: {
@@ -103,6 +107,8 @@ export type Database = {
           notes?: string | null
           scheduled_date?: string
           scheduled_time?: string
+          service_description?: string | null
+          service_id?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
         }
         Relationships: [
@@ -424,6 +430,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_line_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          payment_id: string
+          quantity: number
+          service_id: string | null
+          service_name: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_id: string
+          quantity?: number
+          service_id?: string | null
+          service_name: string
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_id?: string
+          quantity?: number
+          service_id?: string | null
+          service_name?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount_ksh: number
@@ -634,6 +676,48 @@ export type Database = {
           payment_id?: string
           pdf_url?: string | null
           receipt_number?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          display_order: number
+          duration_minutes: number
+          eligible_roles: string[]
+          id: string
+          name: string
+          price_ksh: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          duration_minutes?: number
+          eligible_roles?: string[]
+          id?: string
+          name: string
+          price_ksh?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          duration_minutes?: number
+          eligible_roles?: string[]
+          id?: string
+          name?: string
+          price_ksh?: number
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
