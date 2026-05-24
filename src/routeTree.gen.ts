@@ -14,6 +14,7 @@ import { Route as SurprisesRouteImport } from './routes/surprises'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PerksRouteImport } from './routes/perks'
+import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as FoundersRouteImport } from './routes/founders'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as BrunchRouteImport } from './routes/brunch'
@@ -43,6 +44,11 @@ const ProductsRoute = ProductsRouteImport.update({
 const PerksRoute = PerksRouteImport.update({
   id: '/perks',
   path: '/perks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsRoute = PaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FoundersRoute = FoundersRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/brunch': typeof BrunchRoute
   '/clients': typeof ClientsRoute
   '/founders': typeof FoundersRoute
+  '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/brunch': typeof BrunchRoute
   '/clients': typeof ClientsRoute
   '/founders': typeof FoundersRoute
+  '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/brunch': typeof BrunchRoute
   '/clients': typeof ClientsRoute
   '/founders': typeof FoundersRoute
+  '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/brunch'
     | '/clients'
     | '/founders'
+    | '/payments'
     | '/perks'
     | '/products'
     | '/settings'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/brunch'
     | '/clients'
     | '/founders'
+    | '/payments'
     | '/perks'
     | '/products'
     | '/settings'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/brunch'
     | '/clients'
     | '/founders'
+    | '/payments'
     | '/perks'
     | '/products'
     | '/settings'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   BrunchRoute: typeof BrunchRoute
   ClientsRoute: typeof ClientsRoute
   FoundersRoute: typeof FoundersRoute
+  PaymentsRoute: typeof PaymentsRoute
   PerksRoute: typeof PerksRoute
   ProductsRoute: typeof ProductsRoute
   SettingsRoute: typeof SettingsRoute
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/perks'
       fullPath: '/perks'
       preLoaderRoute: typeof PerksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payments': {
+      id: '/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof PaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/founders': {
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrunchRoute: BrunchRoute,
   ClientsRoute: ClientsRoute,
   FoundersRoute: FoundersRoute,
+  PaymentsRoute: PaymentsRoute,
   PerksRoute: PerksRoute,
   ProductsRoute: ProductsRoute,
   SettingsRoute: SettingsRoute,
@@ -250,3 +271,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
