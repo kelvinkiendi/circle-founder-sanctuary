@@ -15,6 +15,7 @@ import { Route as GuardianViewRouteImport } from './routes/guardian.view'
 import { Route as ConciergeDeskRouteImport } from './routes/concierge.desk'
 import { Route as ArtisanTodayRouteImport } from './routes/artisan.today'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa.callback'
+import { Route as ApiPublicHooksVisitReminders21dRouteImport } from './routes/api/public/hooks/visit-reminders-21d'
 
 const ChangePinRoute = ChangePinRouteImport.update({
   id: '/change-pin',
@@ -46,6 +47,12 @@ const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
   path: '/api/public/mpesa/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksVisitReminders21dRoute =
+  ApiPublicHooksVisitReminders21dRouteImport.update({
+    id: '/api/public/hooks/visit-reminders-21d',
+    path: '/api/public/hooks/visit-reminders-21d',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -53,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
+  '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +69,7 @@ export interface FileRoutesByTo {
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
+  '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRoutesById {
@@ -70,6 +79,7 @@ export interface FileRoutesById {
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
+  '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +90,7 @@ export interface FileRouteTypes {
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
+    | '/api/public/hooks/visit-reminders-21d'
     | '/api/public/mpesa/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +99,7 @@ export interface FileRouteTypes {
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
+    | '/api/public/hooks/visit-reminders-21d'
     | '/api/public/mpesa/callback'
   id:
     | '__root__'
@@ -96,6 +108,7 @@ export interface FileRouteTypes {
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
+    | '/api/public/hooks/visit-reminders-21d'
     | '/api/public/mpesa/callback'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +118,7 @@ export interface RootRouteChildren {
   ArtisanTodayRoute: typeof ArtisanTodayRoute
   ConciergeDeskRoute: typeof ConciergeDeskRoute
   GuardianViewRoute: typeof GuardianViewRoute
+  ApiPublicHooksVisitReminders21dRoute: typeof ApiPublicHooksVisitReminders21dRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
 }
 
@@ -152,6 +166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMpesaCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/visit-reminders-21d': {
+      id: '/api/public/hooks/visit-reminders-21d'
+      path: '/api/public/hooks/visit-reminders-21d'
+      fullPath: '/api/public/hooks/visit-reminders-21d'
+      preLoaderRoute: typeof ApiPublicHooksVisitReminders21dRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -161,8 +182,19 @@ const rootRouteChildren: RootRouteChildren = {
   ArtisanTodayRoute: ArtisanTodayRoute,
   ConciergeDeskRoute: ConciergeDeskRoute,
   GuardianViewRoute: GuardianViewRoute,
+  ApiPublicHooksVisitReminders21dRoute: ApiPublicHooksVisitReminders21dRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
