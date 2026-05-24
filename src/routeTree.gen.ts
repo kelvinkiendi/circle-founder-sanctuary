@@ -9,111 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WhatsappRouteImport } from './routes/whatsapp'
-import { Route as TechRouteImport } from './routes/tech'
-import { Route as SurprisesRouteImport } from './routes/surprises'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as RegistryRouteImport } from './routes/registry'
-import { Route as ProductsRouteImport } from './routes/products'
-import { Route as PerksRouteImport } from './routes/perks'
-import { Route as PaymentsRouteImport } from './routes/payments'
-import { Route as ManagerRouteImport } from './routes/manager'
-import { Route as FoundersRouteImport } from './routes/founders'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as ChangePinRouteImport } from './routes/change-pin'
-import { Route as BrunchRouteImport } from './routes/brunch'
-import { Route as AppointmentsRouteImport } from './routes/appointments'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ReceiptsIdRouteImport } from './routes/receipts.$id'
 import { Route as GuardianViewRouteImport } from './routes/guardian.view'
 import { Route as ConciergeDeskRouteImport } from './routes/concierge.desk'
 import { Route as ArtisanTodayRouteImport } from './routes/artisan.today'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa.callback'
 
-const WhatsappRoute = WhatsappRouteImport.update({
-  id: '/whatsapp',
-  path: '/whatsapp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechRoute = TechRouteImport.update({
-  id: '/tech',
-  path: '/tech',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SurprisesRoute = SurprisesRouteImport.update({
-  id: '/surprises',
-  path: '/surprises',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegistryRoute = RegistryRouteImport.update({
-  id: '/registry',
-  path: '/registry',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProductsRoute = ProductsRouteImport.update({
-  id: '/products',
-  path: '/products',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PerksRoute = PerksRouteImport.update({
-  id: '/perks',
-  path: '/perks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PaymentsRoute = PaymentsRouteImport.update({
-  id: '/payments',
-  path: '/payments',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ManagerRoute = ManagerRouteImport.update({
-  id: '/manager',
-  path: '/manager',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FoundersRoute = FoundersRouteImport.update({
-  id: '/founders',
-  path: '/founders',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClientsRoute = ClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChangePinRoute = ChangePinRouteImport.update({
-  id: '/change-pin',
-  path: '/change-pin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BrunchRoute = BrunchRouteImport.update({
-  id: '/brunch',
-  path: '/brunch',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppointmentsRoute = AppointmentsRouteImport.update({
-  id: '/appointments',
-  path: '/appointments',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReceiptsIdRoute = ReceiptsIdRouteImport.update({
-  id: '/receipts/$id',
-  path: '/receipts/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuardianViewRoute = GuardianViewRouteImport.update({
@@ -139,289 +43,65 @@ const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/appointments': typeof AppointmentsRoute
-  '/brunch': typeof BrunchRoute
-  '/change-pin': typeof ChangePinRoute
-  '/clients': typeof ClientsRoute
-  '/dashboard': typeof DashboardRoute
-  '/founders': typeof FoundersRoute
-  '/manager': typeof ManagerRoute
-  '/payments': typeof PaymentsRoute
-  '/perks': typeof PerksRoute
-  '/products': typeof ProductsRoute
-  '/registry': typeof RegistryRoute
-  '/settings': typeof SettingsRoute
-  '/surprises': typeof SurprisesRoute
-  '/tech': typeof TechRoute
-  '/whatsapp': typeof WhatsappRoute
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
-  '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/appointments': typeof AppointmentsRoute
-  '/brunch': typeof BrunchRoute
-  '/change-pin': typeof ChangePinRoute
-  '/clients': typeof ClientsRoute
-  '/dashboard': typeof DashboardRoute
-  '/founders': typeof FoundersRoute
-  '/manager': typeof ManagerRoute
-  '/payments': typeof PaymentsRoute
-  '/perks': typeof PerksRoute
-  '/products': typeof ProductsRoute
-  '/registry': typeof RegistryRoute
-  '/settings': typeof SettingsRoute
-  '/surprises': typeof SurprisesRoute
-  '/tech': typeof TechRoute
-  '/whatsapp': typeof WhatsappRoute
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
-  '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/appointments': typeof AppointmentsRoute
-  '/brunch': typeof BrunchRoute
-  '/change-pin': typeof ChangePinRoute
-  '/clients': typeof ClientsRoute
-  '/dashboard': typeof DashboardRoute
-  '/founders': typeof FoundersRoute
-  '/manager': typeof ManagerRoute
-  '/payments': typeof PaymentsRoute
-  '/perks': typeof PerksRoute
-  '/products': typeof ProductsRoute
-  '/registry': typeof RegistryRoute
-  '/settings': typeof SettingsRoute
-  '/surprises': typeof SurprisesRoute
-  '/tech': typeof TechRoute
-  '/whatsapp': typeof WhatsappRoute
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
-  '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/appointments'
-    | '/brunch'
-    | '/change-pin'
-    | '/clients'
-    | '/dashboard'
-    | '/founders'
-    | '/manager'
-    | '/payments'
-    | '/perks'
-    | '/products'
-    | '/registry'
-    | '/settings'
-    | '/surprises'
-    | '/tech'
-    | '/whatsapp'
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
-    | '/receipts/$id'
     | '/api/public/mpesa/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/appointments'
-    | '/brunch'
-    | '/change-pin'
-    | '/clients'
-    | '/dashboard'
-    | '/founders'
-    | '/manager'
-    | '/payments'
-    | '/perks'
-    | '/products'
-    | '/registry'
-    | '/settings'
-    | '/surprises'
-    | '/tech'
-    | '/whatsapp'
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
-    | '/receipts/$id'
     | '/api/public/mpesa/callback'
   id:
     | '__root__'
     | '/'
-    | '/appointments'
-    | '/brunch'
-    | '/change-pin'
-    | '/clients'
-    | '/dashboard'
-    | '/founders'
-    | '/manager'
-    | '/payments'
-    | '/perks'
-    | '/products'
-    | '/registry'
-    | '/settings'
-    | '/surprises'
-    | '/tech'
-    | '/whatsapp'
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
-    | '/receipts/$id'
     | '/api/public/mpesa/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppointmentsRoute: typeof AppointmentsRoute
-  BrunchRoute: typeof BrunchRoute
-  ChangePinRoute: typeof ChangePinRoute
-  ClientsRoute: typeof ClientsRoute
-  DashboardRoute: typeof DashboardRoute
-  FoundersRoute: typeof FoundersRoute
-  ManagerRoute: typeof ManagerRoute
-  PaymentsRoute: typeof PaymentsRoute
-  PerksRoute: typeof PerksRoute
-  ProductsRoute: typeof ProductsRoute
-  RegistryRoute: typeof RegistryRoute
-  SettingsRoute: typeof SettingsRoute
-  SurprisesRoute: typeof SurprisesRoute
-  TechRoute: typeof TechRoute
-  WhatsappRoute: typeof WhatsappRoute
   ArtisanTodayRoute: typeof ArtisanTodayRoute
   ConciergeDeskRoute: typeof ConciergeDeskRoute
   GuardianViewRoute: typeof GuardianViewRoute
-  ReceiptsIdRoute: typeof ReceiptsIdRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/whatsapp': {
-      id: '/whatsapp'
-      path: '/whatsapp'
-      fullPath: '/whatsapp'
-      preLoaderRoute: typeof WhatsappRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tech': {
-      id: '/tech'
-      path: '/tech'
-      fullPath: '/tech'
-      preLoaderRoute: typeof TechRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/surprises': {
-      id: '/surprises'
-      path: '/surprises'
-      fullPath: '/surprises'
-      preLoaderRoute: typeof SurprisesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/registry': {
-      id: '/registry'
-      path: '/registry'
-      fullPath: '/registry'
-      preLoaderRoute: typeof RegistryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/products': {
-      id: '/products'
-      path: '/products'
-      fullPath: '/products'
-      preLoaderRoute: typeof ProductsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/perks': {
-      id: '/perks'
-      path: '/perks'
-      fullPath: '/perks'
-      preLoaderRoute: typeof PerksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/payments': {
-      id: '/payments'
-      path: '/payments'
-      fullPath: '/payments'
-      preLoaderRoute: typeof PaymentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/manager': {
-      id: '/manager'
-      path: '/manager'
-      fullPath: '/manager'
-      preLoaderRoute: typeof ManagerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/founders': {
-      id: '/founders'
-      path: '/founders'
-      fullPath: '/founders'
-      preLoaderRoute: typeof FoundersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clients': {
-      id: '/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof ClientsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/change-pin': {
-      id: '/change-pin'
-      path: '/change-pin'
-      fullPath: '/change-pin'
-      preLoaderRoute: typeof ChangePinRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/brunch': {
-      id: '/brunch'
-      path: '/brunch'
-      fullPath: '/brunch'
-      preLoaderRoute: typeof BrunchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/appointments': {
-      id: '/appointments'
-      path: '/appointments'
-      fullPath: '/appointments'
-      preLoaderRoute: typeof AppointmentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/receipts/$id': {
-      id: '/receipts/$id'
-      path: '/receipts/$id'
-      fullPath: '/receipts/$id'
-      preLoaderRoute: typeof ReceiptsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guardian/view': {
@@ -457,25 +137,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppointmentsRoute: AppointmentsRoute,
-  BrunchRoute: BrunchRoute,
-  ChangePinRoute: ChangePinRoute,
-  ClientsRoute: ClientsRoute,
-  DashboardRoute: DashboardRoute,
-  FoundersRoute: FoundersRoute,
-  ManagerRoute: ManagerRoute,
-  PaymentsRoute: PaymentsRoute,
-  PerksRoute: PerksRoute,
-  ProductsRoute: ProductsRoute,
-  RegistryRoute: RegistryRoute,
-  SettingsRoute: SettingsRoute,
-  SurprisesRoute: SurprisesRoute,
-  TechRoute: TechRoute,
-  WhatsappRoute: WhatsappRoute,
   ArtisanTodayRoute: ArtisanTodayRoute,
   ConciergeDeskRoute: ConciergeDeskRoute,
   GuardianViewRoute: GuardianViewRoute,
-  ReceiptsIdRoute: ReceiptsIdRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
 }
 export const routeTree = rootRouteImport
