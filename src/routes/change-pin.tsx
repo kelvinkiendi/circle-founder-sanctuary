@@ -27,6 +27,9 @@ function ChangePinPage() {
     if (!/^\d{4}$/.test(pin)) return setErr("PIN must be 4 digits");
     if (pin !== confirm) return setErr("PINs do not match");
     if (pin === "0000") return setErr("Choose a PIN other than the default");
+    if (/^(\d)\1{3}$/.test(pin)) return setErr("PIN cannot repeat the same digit");
+    const seqUp = "0123456789", seqDown = "9876543210";
+    if (seqUp.includes(pin) || seqDown.includes(pin)) return setErr("PIN cannot be sequential");
     setBusy(true);
     try {
       const r = await changePinFn({ data: { sessionId: session.sessionId, newPin: pin } });
