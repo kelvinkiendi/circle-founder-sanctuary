@@ -87,6 +87,9 @@ function ArtisanScheduler() {
       </header>
 
       <main className="px-4 pb-32 pt-4 space-y-6 max-w-xl mx-auto">
+        {/* Today's Collection */}
+        <CollectionSummary techTag={techTag} today={today} />
+
         {/* Today */}
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -104,6 +107,7 @@ function ArtisanScheduler() {
                 key={a.id}
                 appt={a}
                 onRebook={() => { setRebookClientId(a.client_id); setRebookService(a.appointment_type); setSheet("new"); }}
+                onBill={() => setBillingAppt(a)}
               />
             ))}
           </div>
