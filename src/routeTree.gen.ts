@@ -9,8 +9,56 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SurprisesRouteImport } from './routes/surprises'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProductsRouteImport } from './routes/products'
+import { Route as PerksRouteImport } from './routes/perks'
+import { Route as FoundersRouteImport } from './routes/founders'
+import { Route as ClientsRouteImport } from './routes/clients'
+import { Route as BrunchRouteImport } from './routes/brunch'
+import { Route as AppointmentsRouteImport } from './routes/appointments'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SurprisesRoute = SurprisesRouteImport.update({
+  id: '/surprises',
+  path: '/surprises',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsRoute = ProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerksRoute = PerksRouteImport.update({
+  id: '/perks',
+  path: '/perks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FoundersRoute = FoundersRouteImport.update({
+  id: '/founders',
+  path: '/founders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsRoute = ClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrunchRoute = BrunchRouteImport.update({
+  id: '/brunch',
+  path: '/brunch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppointmentsRoute = AppointmentsRouteImport.update({
+  id: '/appointments',
+  path: '/appointments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +67,144 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/appointments': typeof AppointmentsRoute
+  '/brunch': typeof BrunchRoute
+  '/clients': typeof ClientsRoute
+  '/founders': typeof FoundersRoute
+  '/perks': typeof PerksRoute
+  '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
+  '/surprises': typeof SurprisesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/appointments': typeof AppointmentsRoute
+  '/brunch': typeof BrunchRoute
+  '/clients': typeof ClientsRoute
+  '/founders': typeof FoundersRoute
+  '/perks': typeof PerksRoute
+  '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
+  '/surprises': typeof SurprisesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/appointments': typeof AppointmentsRoute
+  '/brunch': typeof BrunchRoute
+  '/clients': typeof ClientsRoute
+  '/founders': typeof FoundersRoute
+  '/perks': typeof PerksRoute
+  '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
+  '/surprises': typeof SurprisesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/appointments'
+    | '/brunch'
+    | '/clients'
+    | '/founders'
+    | '/perks'
+    | '/products'
+    | '/settings'
+    | '/surprises'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/appointments'
+    | '/brunch'
+    | '/clients'
+    | '/founders'
+    | '/perks'
+    | '/products'
+    | '/settings'
+    | '/surprises'
+  id:
+    | '__root__'
+    | '/'
+    | '/appointments'
+    | '/brunch'
+    | '/clients'
+    | '/founders'
+    | '/perks'
+    | '/products'
+    | '/settings'
+    | '/surprises'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppointmentsRoute: typeof AppointmentsRoute
+  BrunchRoute: typeof BrunchRoute
+  ClientsRoute: typeof ClientsRoute
+  FoundersRoute: typeof FoundersRoute
+  PerksRoute: typeof PerksRoute
+  ProductsRoute: typeof ProductsRoute
+  SettingsRoute: typeof SettingsRoute
+  SurprisesRoute: typeof SurprisesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/surprises': {
+      id: '/surprises'
+      path: '/surprises'
+      fullPath: '/surprises'
+      preLoaderRoute: typeof SurprisesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products': {
+      id: '/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof ProductsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perks': {
+      id: '/perks'
+      path: '/perks'
+      fullPath: '/perks'
+      preLoaderRoute: typeof PerksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/founders': {
+      id: '/founders'
+      path: '/founders'
+      fullPath: '/founders'
+      preLoaderRoute: typeof FoundersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients': {
+      id: '/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof ClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brunch': {
+      id: '/brunch'
+      path: '/brunch'
+      fullPath: '/brunch'
+      preLoaderRoute: typeof BrunchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/appointments': {
+      id: '/appointments'
+      path: '/appointments'
+      fullPath: '/appointments'
+      preLoaderRoute: typeof AppointmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +217,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppointmentsRoute: AppointmentsRoute,
+  BrunchRoute: BrunchRoute,
+  ClientsRoute: ClientsRoute,
+  FoundersRoute: FoundersRoute,
+  PerksRoute: PerksRoute,
+  ProductsRoute: ProductsRoute,
+  SettingsRoute: SettingsRoute,
+  SurprisesRoute: SurprisesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
