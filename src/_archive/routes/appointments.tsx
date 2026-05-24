@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -48,9 +47,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const Route = createFileRoute("/appointments")({
-  component: AppointmentsPage,
-});
 
 const STUDIO_ADDRESS = "Shujaah Mall, opposite Adlife Plaza, Kilimani";
 const STUDIO_AREA = "Kilimani";
@@ -151,7 +147,7 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
-function AppointmentsPage() {
+export function AppointmentsPage() {
   const [weekStart, setWeekStart] = useState(startOfWeek());
   const [view, setView] = useState<"day" | "week">("week");
   const [priorityWindow, setPriorityWindow] = useState(true);
