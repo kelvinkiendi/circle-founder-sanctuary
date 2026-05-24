@@ -50,3 +50,33 @@ export const CAN = {
   rescheduleAppt: (r: StaffRole) => r === "admin" || r === "manager",
   switchPortal: (r: StaffRole) => r === "admin",
 };
+
+// Derive the booking source from appointments.created_by tag.
+// Tags: "tech:<id>" | "reception:<id>" | "admin:<id>" | "client:<id>" | null
+export type ApptSource = "technician" | "reception" | "admin" | "client" | "walk-in";
+
+export function apptSource(createdBy: string | null | undefined): ApptSource {
+  if (!createdBy) return "walk-in";
+  const prefix = createdBy.split(":")[0];
+  if (prefix === "tech") return "technician";
+  if (prefix === "reception") return "reception";
+  if (prefix === "admin") return "admin";
+  if (prefix === "client") return "client";
+  return "walk-in";
+}
+
+export const APPT_SOURCE_LABEL: Record<ApptSource, string> = {
+  technician: "Technician Self-Booked",
+  reception: "Reception Booked",
+  admin: "Admin Booked",
+  client: "Client Booked",
+  "walk-in": "Walk-in",
+};
+
+export const APPT_SOURCE_CLASS: Record<ApptSource, string> = {
+  technician: "bg-gold/15 text-gold border-gold/30",
+  reception: "bg-muted text-muted-foreground border-border",
+  admin: "bg-primary/10 text-primary border-primary/30",
+  client: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+  "walk-in": "bg-secondary text-secondary-foreground border-border",
+};

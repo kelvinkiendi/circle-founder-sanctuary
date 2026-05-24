@@ -10,7 +10,11 @@ export type TemplateKey =
   | "term_expiry"
   | "just_because"
   | "emergency_response"
-  | "installment_reminder";
+  | "installment_reminder"
+  | "appointment_confirmation"
+  | "appointment_cancellation"
+  | "payment_confirmation"
+  | "tech_reminder";
 
 export interface TemplateMeta {
   key: TemplateKey;
@@ -123,6 +127,38 @@ export const WHATSAPP_TEMPLATES: TemplateMeta[] = [
     variables: ["amount", "date", "paybill", "founder_number"],
     render: (x) =>
       `Reminder: Your 2nd Founder Circle installment of ${v(x, "amount")} KSH is due on ${v(x, "date")}. Pay via M-Pesa Paybill ${v(x, "paybill", "—")} Account: ${v(x, "founder_number", "—")}. — COTERIE`,
+  },
+  {
+    key: "appointment_confirmation",
+    label: "13 · Appointment Confirmation",
+    description: "Sent when an appointment is booked.",
+    variables: ["name", "service", "date", "time"],
+    render: (x) =>
+      `${v(x, "name")}, your ${v(x, "service")} is confirmed for ${v(x, "date")} at ${v(x, "time")}. See you at COTERIE Nail Sanctuary, Shujaah Mall, Kilimani. — COTERIE`,
+  },
+  {
+    key: "appointment_cancellation",
+    label: "14 · Appointment Cancellation",
+    description: "Sent on cancellation.",
+    variables: ["name", "service", "date", "time"],
+    render: (x) =>
+      `${v(x, "name")}, your ${v(x, "service")} on ${v(x, "date")} at ${v(x, "time")} has been cancelled. Reply to rebook. — COTERIE`,
+  },
+  {
+    key: "payment_confirmation",
+    label: "15 · Payment Confirmation",
+    description: "Sent after successful M-Pesa payment.",
+    variables: ["name", "amount", "receipt"],
+    render: (x) =>
+      `Thank you ${v(x, "name")}. We've received ${v(x, "amount")} KSH. M-Pesa receipt: ${v(x, "receipt")}. — COTERIE`,
+  },
+  {
+    key: "tech_reminder",
+    label: "16 · Artisan 1-Hour Reminder",
+    description: "Sent to technician 1 hour before a self-booked appointment.",
+    variables: ["service", "time", "client"],
+    render: (x) =>
+      `Reminder: ${v(x, "service")} with ${v(x, "client")} at ${v(x, "time")} (in 1 hour). — COTERIE`,
   },
 ];
 
