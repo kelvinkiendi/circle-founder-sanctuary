@@ -11,6 +11,7 @@ import {
   Settings,
   MessageSquare,
   CreditCard,
+  Smartphone,
 } from "lucide-react";
 
 const items = [
