@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
+import { Route as TechRouteImport } from './routes/tech'
 import { Route as SurprisesRouteImport } from './routes/surprises'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProductsRouteImport } from './routes/products'
@@ -26,6 +27,11 @@ import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/
 const WhatsappRoute = WhatsappRouteImport.update({
   id: '/whatsapp',
   path: '/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechRoute = TechRouteImport.update({
+  id: '/tech',
+  path: '/tech',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SurprisesRoute = SurprisesRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
+  '/tech': typeof TechRoute
   '/whatsapp': typeof WhatsappRoute
   '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
+  '/tech': typeof TechRoute
   '/whatsapp': typeof WhatsappRoute
   '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
+  '/tech': typeof TechRoute
   '/whatsapp': typeof WhatsappRoute
   '/receipts/$id': typeof ReceiptsIdRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/products'
     | '/settings'
     | '/surprises'
+    | '/tech'
     | '/whatsapp'
     | '/receipts/$id'
     | '/api/public/mpesa/callback'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/products'
     | '/settings'
     | '/surprises'
+    | '/tech'
     | '/whatsapp'
     | '/receipts/$id'
     | '/api/public/mpesa/callback'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/products'
     | '/settings'
     | '/surprises'
+    | '/tech'
     | '/whatsapp'
     | '/receipts/$id'
     | '/api/public/mpesa/callback'
@@ -194,6 +206,7 @@ export interface RootRouteChildren {
   ProductsRoute: typeof ProductsRoute
   SettingsRoute: typeof SettingsRoute
   SurprisesRoute: typeof SurprisesRoute
+  TechRoute: typeof TechRoute
   WhatsappRoute: typeof WhatsappRoute
   ReceiptsIdRoute: typeof ReceiptsIdRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
@@ -206,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/whatsapp'
       fullPath: '/whatsapp'
       preLoaderRoute: typeof WhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tech': {
+      id: '/tech'
+      path: '/tech'
+      fullPath: '/tech'
+      preLoaderRoute: typeof TechRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/surprises': {
@@ -306,6 +326,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProductsRoute: ProductsRoute,
   SettingsRoute: SettingsRoute,
   SurprisesRoute: SurprisesRoute,
+  TechRoute: TechRoute,
   WhatsappRoute: WhatsappRoute,
   ReceiptsIdRoute: ReceiptsIdRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
