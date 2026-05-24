@@ -20,6 +20,7 @@ import { BrunchPage } from "@/_archive/routes/brunch";
 import { PaymentsPage } from "@/_archive/routes/payments";
 import { WhatsAppHub } from "@/_archive/routes/whatsapp";
 import { SettingsPage } from "@/_archive/routes/settings";
+import { ServicesPage } from "@/_archive/routes/services";
 
 export const Route = createFileRoute("/concierge/desk")({
   component: () => (
