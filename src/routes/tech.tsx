@@ -383,7 +383,7 @@ function Schedule({ tech, onLogout }: { tech: string; onLogout: () => void }) {
     if (!q.length) return;
     (async () => {
       for (const item of q) {
-        await supabase.from("appointments").update({ status: item.status }).eq("id", item.id);
+        await supabase.from("appointments").update({ status: item.status as any }).eq("id", item.id);
       }
       localStorage.removeItem("coterie_offline_queue");
       toast.success(`Synced ${q.length} offline update${q.length > 1 ? "s" : ""}`);
