@@ -31,7 +31,7 @@ type ClientRow = {
 
 const REFERRAL_SOURCES = ["Instagram", "Referral", "Walk-in", "Google", "Friend", "Other"];
 
-function Registry() {
+export function Registry() {
   const { session } = useSession();
   const canBulkImport = session?.role === "admin" || session?.role === "manager";
   const canEnrollFounder = session?.role === "admin";
