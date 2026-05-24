@@ -629,6 +629,7 @@ function NewAppointmentDialog({
           duration_minutes: duration,
           status: "booked",
           location,
+          created_by: "reception:desk",
           notes: [
             notes,
             location === "travel" && `Travel to ${travelAddress} (${travelArea})`,
@@ -653,11 +654,33 @@ function NewAppointmentDialog({
           })
           .eq("id", selectedPerk.id);
       }
+
+      // Queue WhatsApp confirmation (skipped if client opted out)
+      if (selectedClient && !selectedClient.whatsapp_opt_out) {
+        const firstName = selectedClient.full_name?.split(" ")[0] ?? "there";
+        const dateLabel = new Date(date).toLocaleDateString("en-GB", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        });
+        const body = `${firstName}, your ${TYPE_META[effectiveType]?.label ?? "appointment"} is confirmed for ${dateLabel} at ${time}. See you at COTERIE Nail Sanctuary, Shujaah Mall, Kilimani. — COTERIE`;
+        await supabase.from("whatsapp_messages").insert({
+          client_id: clientId,
+          template_key: "appointment_confirmation",
+          body,
+          status: "sent",
+          created_by: "appointment_booked",
+        });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appts"] });
       qc.invalidateQueries({ queryKey: ["perks"] });
-      toast.success("Appointment booked");
+      toast.success("Appointment booked", {
+        description: selectedClient?.whatsapp_opt_out
+          ? "Client opted out — no WhatsApp sent."
+          : "WhatsApp confirmation queued.",
+      });
       onClose();
     },
     onError: (e: any) => toast.error(e.message ?? "Booking failed"),
