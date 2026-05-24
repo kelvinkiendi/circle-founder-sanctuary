@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,7 +51,7 @@ function Desk() {
             <Search className="h-4 w-4 text-muted-foreground" />
             <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search by name, phone, WhatsApp…"
               className="flex-1 bg-transparent text-sm outline-none border-b border-border py-2" />
-            <Link to="/clients" className="text-xs uppercase tracking-[0.2em] flex items-center gap-1 text-primary"><UserPlus className="h-3 w-3"/> New</Link>
+            <span className="text-xs uppercase tracking-[0.2em] flex items-center gap-1 text-muted-foreground"><UserPlus className="h-3 w-3"/> New</span>
           </div>
           <ul className="divide-y divide-border">
             {clients?.map((c: any) => (
@@ -60,7 +60,7 @@ function Desk() {
                   <div className="text-sm font-medium truncate">{c.full_name}</div>
                   <div className="text-xs text-muted-foreground">{c.phone ?? c.whatsapp_number ?? "—"} · {c.client_type}</div>
                 </div>
-                <Link to="/appointments" className="text-xs uppercase tracking-[0.2em] text-primary flex items-center gap-1"><Calendar className="h-3 w-3"/> Book</Link>
+                <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3"/> Book</span>
               </li>
             ))}
             {!clients?.length && <li className="py-8 text-center text-sm text-muted-foreground italic">No clients match.</li>}
@@ -79,9 +79,9 @@ function Desk() {
             ))}
             {!appts?.length && <li className="py-6 text-center text-xs text-muted-foreground italic">No appointments today.</li>}
           </ul>
-          <Link to="/payments" className="mt-5 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-primary">
+          <div className="mt-5 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
             <CreditCard className="h-3 w-3" /> Collect Payment
-          </Link>
+          </div>
         </section>
       </div>
     </>
