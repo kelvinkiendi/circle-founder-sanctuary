@@ -1054,14 +1054,25 @@ function Step4Confirm({
       }
 
       if (notifyClient && (client.whatsapp_number || client.phone)) {
-        await supabase.from("whatsapp_messages").insert({
-          client_id: client.id,
-          template_key: "booking_confirmation",
-          body: `Hi ${client.full_name}, your ${label} is confirmed for ${date} at ${time.slice(0, 5)} (${location === "travel" ? "travel" : "studio"}). — COTERIE`,
-          status: "queued",
-          created_by: techTag,
-        });
+        try {
+          await sendWhatsAppMessage({
+            data: {
+              clientId: client.id,
+              appointmentId: appt.id,
+              templateKey: "appointment_confirmation",
+              vars: {
+                name: client.full_name?.split(" ")[0] ?? "there",
+                service: label,
+                date,
+                time: time.slice(0, 5),
+              },
+            },
+          });
+        } catch (e: any) {
+          console.warn("WhatsApp send failed:", e?.message);
+        }
       }
+
 
       await supabase.from("activity_log").insert({
         entity: "appointment", entity_id: appt.id, action: "self_booked",
