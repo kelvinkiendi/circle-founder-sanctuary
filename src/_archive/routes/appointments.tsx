@@ -629,6 +629,7 @@ function NewAppointmentDialog({
           duration_minutes: duration,
           status: "booked",
           location,
+          created_by: "reception:desk",
           notes: [
             notes,
             location === "travel" && `Travel to ${travelAddress} (${travelArea})`,
@@ -653,11 +654,33 @@ function NewAppointmentDialog({
           })
           .eq("id", selectedPerk.id);
       }
+
+      // Queue WhatsApp confirmation (skipped if client opted out)
+      if (selectedClient && !selectedClient.whatsapp_opt_out) {
+        const firstName = selectedClient.full_name?.split(" ")[0] ?? "there";
+        const dateLabel = new Date(date).toLocaleDateString("en-GB", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        });
+        const body = `${firstName}, your ${TYPE_META[effectiveType]?.label ?? "appointment"} is confirmed for ${dateLabel} at ${time}. See you at COTERIE Nail Sanctuary, Shujaah Mall, Kilimani. — COTERIE`;
+        await supabase.from("whatsapp_messages").insert({
+          client_id: clientId,
+          template_key: "appointment_confirmation",
+          body,
+          status: "sent",
+          created_by: "appointment_booked",
+        });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appts"] });
       qc.invalidateQueries({ queryKey: ["perks"] });
-      toast.success("Appointment booked");
+      toast.success("Appointment booked", {
+        description: selectedClient?.whatsapp_opt_out
+          ? "Client opted out — no WhatsApp sent."
+          : "WhatsApp confirmation queued.",
+      });
       onClose();
     },
     onError: (e: any) => toast.error(e.message ?? "Booking failed"),
@@ -992,19 +1015,38 @@ function AppointmentDetailDialog({
 
       // Side effects on perk records
       if (next === "no-show") {
-        // forfeit related perk
         await supabase
           .from("perks_usage")
           .update({ status: "forfeited" })
           .eq("related_appointment_id", appt.id);
       } else if (next === "cancelled") {
-        // restore perk if cancelled with notice (assume >=24hr)
         await supabase
           .from("perks_usage")
           .update({ status: "available", used_date: null, related_appointment_id: null })
           .eq("related_appointment_id", appt.id);
-      } else if (next === "completed") {
-        // keep perk as used
+      }
+
+      // WhatsApp on cancel (skip if client opted out)
+      if (next === "cancelled" && appt.client_id) {
+        const { data: c } = await supabase
+          .from("clients")
+          .select("full_name, whatsapp_opt_out")
+          .eq("id", appt.client_id)
+          .maybeSingle();
+        if (c && !c.whatsapp_opt_out) {
+          const firstName = c.full_name?.split(" ")[0] ?? "there";
+          const dateLabel = new Date(appt.scheduled_date).toLocaleDateString("en-GB", {
+            weekday: "long", day: "numeric", month: "long",
+          });
+          const body = `${firstName}, your ${meta?.label ?? "appointment"} on ${dateLabel} at ${appt.scheduled_time?.slice(0,5)} has been cancelled. Reply to rebook. — COTERIE`;
+          await supabase.from("whatsapp_messages").insert({
+            client_id: appt.client_id,
+            template_key: "appointment_cancellation",
+            body,
+            status: "sent",
+            created_by: "appointment_cancelled",
+          });
+        }
       }
     },
     onSuccess: (_d, next) => {
@@ -1012,8 +1054,8 @@ function AppointmentDetailDialog({
       qc.invalidateQueries({ queryKey: ["perks"] });
       const messages: Record<ApptStatus, string> = {
         completed: "Marked complete",
-        "no-show": "No-show recorded · perk forfeited · WhatsApp notification queued",
-        cancelled: "Cancelled · perk returned to available",
+        "no-show": "No-show recorded · perk forfeited",
+        cancelled: "Cancelled · perk returned · WhatsApp queued",
         booked: "Status updated",
         forfeited: "Forfeited",
       };
