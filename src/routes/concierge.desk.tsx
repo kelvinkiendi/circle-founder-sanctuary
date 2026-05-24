@@ -20,6 +20,7 @@ import { BrunchPage } from "@/_archive/routes/brunch";
 import { PaymentsPage } from "@/_archive/routes/payments";
 import { WhatsAppHub } from "@/_archive/routes/whatsapp";
 import { SettingsPage } from "@/_archive/routes/settings";
+import { ServicesPage } from "@/_archive/routes/services";
 
 export const Route = createFileRoute("/concierge/desk")({
   component: () => (
@@ -48,6 +49,9 @@ function DeskShell() {
       { id: "brunch", label: "Brunch", render: () => <BrunchPage /> },
       { id: "payments", label: "Payments", render: () => <PaymentsPage /> },
       { id: "whatsapp", label: "WhatsApp", render: () => <WhatsAppHub /> },
+      CAN.changeSettings(role)
+        ? { id: "services", label: "Services", render: () => <ServicesPage /> }
+        : null,
       CAN.changeSettings(role)
         ? { id: "settings", label: "Settings", render: () => <SettingsPage /> }
         : null,

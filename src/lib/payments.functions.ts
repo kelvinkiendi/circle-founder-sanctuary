@@ -321,3 +321,112 @@ export const runSuspensionSweep = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { suspended: data ?? 0 };
   });
+
+// Record a cash payment (paid immediately, generates receipt + WA queue + line items)
+export const recordCashPayment = createServerFn({ method: "POST" })
+  .inputValidator((d: {
+    client_id: string;
+    founder_id?: string | null;
+    amount_ksh: number;
+    description?: string;
+    related_appointment_id?: string | null;
+    line_items?: Array<{ service_id?: string | null; service_name: string; quantity: number; unit_price: number }>;
+    created_by?: string;
+  }) =>
+    z.object({
+      client_id: z.string().uuid(),
+      founder_id: z.string().uuid().nullable().optional(),
+      amount_ksh: z.number().positive(),
+      description: z.string().optional(),
+      related_appointment_id: z.string().uuid().nullable().optional(),
+      line_items: z.array(z.object({
+        service_id: z.string().uuid().nullable().optional(),
+        service_name: z.string().min(1),
+        quantity: z.number().int().positive(),
+        unit_price: z.number().nonnegative(),
+      })).optional(),
+      created_by: z.string().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const receiptNo = genReceiptNumber();
+    const { data: payment, error } = await supabaseAdmin.from("payments").insert({
+      client_id: data.client_id,
+      founder_id: data.founder_id ?? null,
+      payment_type: "other",
+      amount_ksh: data.amount_ksh,
+      phone: "CASH",
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      mpesa_receipt_number: `CASH-${receiptNo.slice(-4)}`,
+      description: data.description ?? "Cash payment",
+      related_appointment_id: data.related_appointment_id ?? null,
+      created_by: data.created_by ?? null,
+    }).select().single();
+    if (error) throw new Error(error.message);
+
+    if (data.line_items?.length) {
+      await (supabaseAdmin as any).from("payment_line_items").insert(
+        data.line_items.map((li) => ({
+          payment_id: payment.id,
+          service_id: li.service_id ?? null,
+          service_name: li.service_name,
+          quantity: li.quantity,
+          unit_price: li.unit_price,
+          total_price: li.unit_price * li.quantity,
+        })),
+      );
+    }
+
+    const { data: receipt } = await supabaseAdmin.from("receipts").insert({
+      payment_id: payment.id,
+      client_id: payment.client_id,
+      founder_id: payment.founder_id,
+      receipt_number: receiptNo,
+      amount_ksh: payment.amount_ksh,
+      description: payment.description,
+    }).select().single();
+
+    const { data: client } = await supabaseAdmin
+      .from("clients").select("full_name").eq("id", data.client_id).single();
+    await supabaseAdmin.from("whatsapp_messages").insert({
+      client_id: data.client_id,
+      template_key: "payment_confirmation",
+      body: `Thank you ${client?.full_name?.split(" ")[0] ?? "there"}. We've received ${data.amount_ksh} KSH (cash). Receipt: ${receiptNo}. — COTERIE`,
+      status: "queued",
+      created_by: data.created_by ?? "system",
+    });
+
+    return { payment, receipt };
+  });
+
+// Attach line items to an existing (M-Pesa) payment
+export const addPaymentLineItems = createServerFn({ method: "POST" })
+  .inputValidator((d: {
+    payment_id: string;
+    line_items: Array<{ service_id?: string | null; service_name: string; quantity: number; unit_price: number }>;
+  }) =>
+    z.object({
+      payment_id: z.string().uuid(),
+      line_items: z.array(z.object({
+        service_id: z.string().uuid().nullable().optional(),
+        service_name: z.string().min(1),
+        quantity: z.number().int().positive(),
+        unit_price: z.number().nonnegative(),
+      })).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { error } = await (supabaseAdmin as any).from("payment_line_items").insert(
+      data.line_items.map((li) => ({
+        payment_id: data.payment_id,
+        service_id: li.service_id ?? null,
+        service_name: li.service_name,
+        quantity: li.quantity,
+        unit_price: li.unit_price,
+        total_price: li.unit_price * li.quantity,
+      })),
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

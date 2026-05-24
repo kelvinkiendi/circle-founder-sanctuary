@@ -1,14 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession, RequireRole } from "@/lib/session";
 import { toast } from "sonner";
 import {
   Plus, X, Search, Calendar, Clock, MapPin, Gift, Sparkles, Plane,
   Coffee, AlertTriangle, CheckCircle2, ChevronRight, Repeat, LogOut, Lock, User,
+  Wallet, Smartphone, Banknote, Trash2,
 } from "lucide-react";
 import { normalizeKePhone } from "@/lib/phone";
+import { initiateMpesaStkPush, recordCashPayment, addPaymentLineItems } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/artisan/today")({
   component: () => (
@@ -46,6 +49,7 @@ const BLOCKED_REASONS = ["Lunch Break", "Personal Appointment", "Sick Leave", "T
 function ArtisanScheduler() {
   const { session, logout } = useSession();
   const [sheet, setSheet] = useState<"new" | "block" | null>(null);
+  const [billingAppt, setBillingAppt] = useState<any | null>(null);
   const [rebookClientId, setRebookClientId] = useState<string | null>(null);
   const [rebookService, setRebookService] = useState<ServiceType | null>(null);
   const techTag = `tech:${session?.staffId ?? ""}`;
@@ -83,6 +87,9 @@ function ArtisanScheduler() {
       </header>
 
       <main className="px-4 pb-32 pt-4 space-y-6 max-w-xl mx-auto">
+        {/* Today's Collection */}
+        <CollectionSummary techTag={techTag} today={today} />
+
         {/* Today */}
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -100,6 +107,7 @@ function ArtisanScheduler() {
                 key={a.id}
                 appt={a}
                 onRebook={() => { setRebookClientId(a.client_id); setRebookService(a.appointment_type); setSheet("new"); }}
+                onBill={() => setBillingAppt(a)}
               />
             ))}
           </div>
@@ -153,12 +161,76 @@ function ArtisanScheduler() {
           techTag={techTag}
         />
       )}
+      {billingAppt && (
+        <BillingSheet
+          appt={billingAppt}
+          techTag={techTag}
+          onClose={() => setBillingAppt(null)}
+          onDone={() => { setBillingAppt(null); qc.invalidateQueries({ queryKey: ["artisan-collection"] }); }}
+        />
+      )}
     </div>
   );
 }
 
+// ============ Today's Collection Summary ============
+function CollectionSummary({ techTag, today }: { techTag: string; today: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data } = useQuery({
+    queryKey: ["artisan-collection", techTag, today],
+    queryFn: async () => {
+      const start = `${today}T00:00:00`;
+      const end = `${today}T23:59:59`;
+      const { data: pays } = await supabase
+        .from("payments")
+        .select("id, amount_ksh, phone, status, mpesa_receipt_number, description, paid_at, created_by")
+        .eq("status", "paid")
+        .eq("created_by", techTag)
+        .gte("paid_at", start).lte("paid_at", end)
+        .order("paid_at", { ascending: false });
+      return pays ?? [];
+    },
+    refetchInterval: 30_000,
+  });
+  const rows = data ?? [];
+  const cash = rows.filter((p: any) => p.phone === "CASH").reduce((s: number, p: any) => s + Number(p.amount_ksh), 0);
+  const mpesa = rows.filter((p: any) => p.phone !== "CASH").reduce((s: number, p: any) => s + Number(p.amount_ksh), 0);
+  const total = cash + mpesa;
+
+  return (
+    <section className="bg-[#5D4037] text-[#F5F5DC] rounded-xl p-4 shadow-md">
+      <div className="flex items-center gap-3">
+        <Wallet className="h-5 w-5" />
+        <div className="flex-1">
+          <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">Today's Collection</div>
+          <div className="font-display text-2xl">KSH {total.toLocaleString()}</div>
+        </div>
+        <button onClick={() => setExpanded(!expanded)} className="text-[11px] uppercase tracking-wider underline">
+          {expanded ? "Hide" : "Details"}
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+        <div className="bg-white/10 rounded p-2 flex items-center gap-2"><Smartphone className="h-3.5 w-3.5" /> M-Pesa: KSH {mpesa.toLocaleString()}</div>
+        <div className="bg-white/10 rounded p-2 flex items-center gap-2"><Banknote className="h-3.5 w-3.5" /> Cash: KSH {cash.toLocaleString()}</div>
+      </div>
+      {expanded && (
+        <ul className="mt-3 space-y-1 text-xs max-h-40 overflow-y-auto">
+          {rows.length === 0 && <li className="opacity-60 italic">No collections yet today.</li>}
+          {rows.map((p: any) => (
+            <li key={p.id} className="flex items-center gap-2 bg-white/5 rounded px-2 py-1.5">
+              <span className="font-mono opacity-70 text-[10px]">{p.mpesa_receipt_number ?? "—"}</span>
+              <span className="flex-1 truncate">{p.description ?? "Service"}</span>
+              <span>KSH {Number(p.amount_ksh).toLocaleString()}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 // ============ Appointment Card ============
-function ApptCard({ appt, onRebook, compact }: { appt: any; onRebook: () => void; compact?: boolean }) {
+function ApptCard({ appt, onRebook, onBill, compact }: { appt: any; onRebook: () => void; onBill?: () => void; compact?: boolean }) {
   const meta = SERVICE_META[appt.appointment_type as ServiceType];
   const isBlock = String(appt.notes ?? "").startsWith("[BLOCK]");
   return (
@@ -183,12 +255,179 @@ function ApptCard({ appt, onRebook, compact }: { appt: any; onRebook: () => void
           </div>
         </div>
         {!compact && !isBlock && (
-          <button onClick={onRebook} className="text-[10px] uppercase tracking-wider text-[#5D4037] flex items-center gap-1 px-2 py-1 rounded hover:bg-[#5D4037]/5">
-            <Repeat className="h-3 w-3" /> Rebook
-          </button>
+          <div className="flex flex-col gap-1">
+            <button onClick={onRebook} className="text-[10px] uppercase tracking-wider text-[#5D4037] flex items-center gap-1 px-2 py-1 rounded hover:bg-[#5D4037]/5">
+              <Repeat className="h-3 w-3" /> Rebook
+            </button>
+            {onBill && (
+              <button onClick={onBill} className="text-[10px] uppercase tracking-wider text-[#F5F5DC] bg-[#5D4037] flex items-center gap-1 px-2 py-1 rounded">
+                <Wallet className="h-3 w-3" /> Bill
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
+  );
+}
+
+// ============ Billing Sheet ============
+function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: string; onClose: () => void; onDone: () => void }) {
+  const stk = useServerFn(initiateMpesaStkPush);
+  const cash = useServerFn(recordCashPayment);
+  const addLines = useServerFn(addPaymentLineItems);
+
+  const [phone, setPhone] = useState<string>(appt.clients?.phone ?? "");
+  const [method, setMethod] = useState<"mpesa" | "cash">("mpesa");
+  const [busy, setBusy] = useState(false);
+  type Row = { service_id: string | null; service_name: string; quantity: number; unit_price: number };
+  const [rows, setRows] = useState<Row[]>([]);
+  const [override, setOverride] = useState<number | null>(null);
+  const [desc, setDesc] = useState<string>("");
+
+  const { data: services = [] } = useQuery({
+    queryKey: ["bill-services"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("services")
+        .select("id, name, price_ksh, duration_minutes")
+        .eq("status", "active").order("display_order");
+      return data ?? [];
+    },
+  });
+
+  const computedTotal = rows.reduce((s, r) => s + r.unit_price * r.quantity, 0);
+  const total = override ?? computedTotal;
+  const autoDesc = rows.map((r) => `${r.service_name}${r.quantity > 1 ? ` ×${r.quantity}` : ""}`).join(", ");
+
+  const addRow = (serviceId: string) => {
+    const svc = services.find((s: any) => s.id === serviceId);
+    if (!svc) return;
+    setRows([...rows, { service_id: svc.id, service_name: svc.name, quantity: 1, unit_price: Number(svc.price_ksh) }]);
+  };
+
+  const removeRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
+
+  const submit = async () => {
+    if (rows.length === 0) { toast.error("Add at least one service"); return; }
+    if (total <= 0) { toast.error("Total must be > 0"); return; }
+    const description = (desc || autoDesc).slice(0, 200);
+    setBusy(true);
+    try {
+      if (method === "cash") {
+        await cash({
+          data: {
+            client_id: appt.client_id,
+            amount_ksh: total,
+            description,
+            related_appointment_id: appt.id,
+            line_items: rows,
+            created_by: techTag,
+          },
+        });
+        toast.success("Cash payment recorded");
+        onDone();
+        return;
+      }
+      const ph = normalizeKePhone(phone);
+      if (!ph) { toast.error("Invalid phone"); setBusy(false); return; }
+      const res = await stk({
+        data: {
+          client_id: appt.client_id,
+          payment_type: "other",
+          amount_ksh: total,
+          phone: ph,
+          description,
+          related_appointment_id: appt.id,
+        },
+      });
+      try { await addLines({ data: { payment_id: res.payment_id, line_items: rows } }); } catch {}
+      toast.success(res.prompt);
+      onDone();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Sheet title="Bill Client" onClose={onClose}>
+      <div className="space-y-4">
+        {/* Step 1: Client */}
+        <div className="bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
+          <div className="text-[10px] uppercase tracking-wider text-[#8b6f47] mb-1">Client</div>
+          <div className="text-sm font-medium">{appt.clients?.full_name ?? "Guest"}</div>
+          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] mt-2 block">M-Pesa Phone</label>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel"
+            className="w-full mt-1 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm" />
+        </div>
+
+        {/* Step 2: Services */}
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-[#8b6f47] mb-1.5">Services</div>
+          <div className="space-y-2">
+            {rows.map((r, i) => (
+              <div key={i} className="flex items-center gap-2 bg-white border border-[#d4b896] rounded-lg p-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm truncate">{r.service_name}</div>
+                  <div className="text-[10px] text-[#8b6f47]">KSH {r.unit_price.toLocaleString()} × {r.quantity}</div>
+                </div>
+                <input type="number" min={1} value={r.quantity}
+                  onChange={(e) => { const n = [...rows]; n[i].quantity = Math.max(1, Number(e.target.value)); setRows(n); }}
+                  className="w-14 px-2 py-1 border border-[#d4b896] rounded text-sm text-center" />
+                <input type="number" min={0} value={r.unit_price}
+                  onChange={(e) => { const n = [...rows]; n[i].unit_price = Number(e.target.value); setRows(n); }}
+                  className="w-20 px-2 py-1 border border-[#d4b896] rounded text-sm text-right" />
+                <button onClick={() => removeRow(i)} className="p-1 text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>
+              </div>
+            ))}
+          </div>
+          <select onChange={(e) => { if (e.target.value) { addRow(e.target.value); e.target.value = ""; } }}
+            className="w-full mt-2 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm">
+            <option value="">+ Add a service…</option>
+            {services.map((s: any) => (
+              <option key={s.id} value={s.id}>{s.name} — KSH {Number(s.price_ksh).toLocaleString()}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Step 3: Amount + payment */}
+        <div className="bg-white border border-[#d4b896] rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">Computed total</span>
+            <span className="font-display text-lg">KSH {computedTotal.toLocaleString()}</span>
+          </div>
+          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Override amount (optional)</label>
+          <input type="number" value={override ?? ""} placeholder={String(computedTotal)}
+            onChange={(e) => setOverride(e.target.value === "" ? null : Number(e.target.value))}
+            className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
+          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Description</label>
+          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={autoDesc || "Service description"}
+            className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
+          <div className="flex gap-2 pt-1">
+            <button onClick={() => setMethod("mpesa")}
+              className={`flex-1 py-2 rounded text-xs border flex items-center justify-center gap-1 ${method === "mpesa" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+              <Smartphone className="h-3.5 w-3.5" /> M-Pesa STK
+            </button>
+            <button onClick={() => setMethod("cash")}
+              className={`flex-1 py-2 rounded text-xs border flex items-center justify-center gap-1 ${method === "cash" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+              <Banknote className="h-3.5 w-3.5" /> Cash
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
+          <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">To collect</span>
+          <span className="font-display text-2xl text-[#5D4037]">KSH {total.toLocaleString()}</span>
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 border border-[#5D4037]/30 rounded-lg text-sm">Cancel</button>
+          <button disabled={busy} onClick={submit}
+            className="flex-1 py-3 bg-[#5D4037] text-[#F5F5DC] rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+            {busy ? "Processing…" : method === "mpesa" ? <><Smartphone className="h-4 w-4" /> Send STK Push</> : <><Banknote className="h-4 w-4" /> Record Cash</>}
+          </button>
+        </div>
+      </div>
+    </Sheet>
   );
 }
 
