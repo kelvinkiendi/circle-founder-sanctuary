@@ -925,7 +925,7 @@ export type Database = {
       brunch_attendance_status: "confirmed" | "attended" | "no_show"
       brunch_event_status: "upcoming" | "completed" | "cancelled"
       client_status: "active" | "inactive"
-      client_type: "regular" | "founder"
+      client_type: "regular" | "founder" | "prospect"
       founder_status: "active" | "expired" | "pending"
       payment_method: "full" | "installment"
       payment_status: "pending" | "paid" | "failed" | "cancelled"
@@ -1103,7 +1103,7 @@ export const Constants = {
       brunch_attendance_status: ["confirmed", "attended", "no_show"],
       brunch_event_status: ["upcoming", "completed", "cancelled"],
       client_status: ["active", "inactive"],
-      client_type: ["regular", "founder"],
+      client_type: ["regular", "founder", "prospect"],
       founder_status: ["active", "expired", "pending"],
       payment_method: ["full", "installment"],
       payment_status: ["pending", "paid", "failed", "cancelled"],
