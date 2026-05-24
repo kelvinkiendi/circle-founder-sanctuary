@@ -288,6 +288,33 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          founder_id: string | null
+          id: string
+          kind: string
+          message: string
+          read: boolean
+        }
+        Insert: {
+          created_at?: string
+          founder_id?: string | null
+          id?: string
+          kind: string
+          message: string
+          read?: boolean
+        }
+        Update: {
+          created_at?: string
+          founder_id?: string | null
+          id?: string
+          kind?: string
+          message?: string
+          read?: boolean
+        }
+        Relationships: []
+      }
       perks_usage: {
         Row: {
           created_at: string
@@ -341,6 +368,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_access_windows: {
+        Row: {
+          closes_at: string
+          created_at: string
+          id: string
+          opens_at: string
+          product_id: string
+        }
+        Insert: {
+          closes_at: string
+          created_at?: string
+          id?: string
+          opens_at?: string
+          product_id: string
+        }
+        Update: {
+          closes_at?: string
+          created_at?: string
+          id?: string
+          opens_at?: string
+          product_id?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
