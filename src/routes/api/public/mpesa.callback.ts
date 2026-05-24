@@ -4,6 +4,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 // Safaricom Daraja STK Push callback
 // Configure CallBackURL to: https://<project>.lovable.app/api/public/mpesa/callback
 export const Route = createFileRoute("/api/public/mpesa/callback")({
+  component: () => null,
+  ssr: false,
   server: {
     handlers: {
       POST: async ({ request }) => {

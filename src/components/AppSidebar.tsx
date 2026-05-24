@@ -1,35 +1,18 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  LayoutDashboard, Users, Crown, CalendarDays, Sparkles, Gift, Package,
-  Wine, Settings, MessageSquare, CreditCard, Smartphone, LogOut, UserPlus,
-} from "lucide-react";
+import { useRouterState } from "@tanstack/react-router";
+import { Users, LayoutDashboard, Smartphone, LogOut } from "lucide-react";
 import { useSession } from "@/lib/session";
 import { NAV_BY_ROLE, ROLE_LABEL, type NavKey } from "@/lib/permissions";
 
 const ITEMS: Record<NavKey, { title: string; url: string; icon: any }> = {
-  dashboard:   { title: "Dashboard",        url: "/dashboard",    icon: LayoutDashboard },
-  registry:    { title: "The Registry",     url: "/registry",     icon: UserPlus },
-  clients:     { title: "All Clients",      url: "/clients",      icon: Users },
-  founders:    { title: "The Circle",       url: "/founders",     icon: Crown },
-  appointments:{ title: "Appointments",     url: "/appointments", icon: CalendarDays },
-  perks:       { title: "Perks Tracker",    url: "/perks",        icon: Sparkles },
-  surprises:   { title: "Surprise Moments", url: "/surprises",    icon: Gift },
-  products:    { title: "Product Vault",    url: "/products",     icon: Package },
-  brunch:      { title: "Founder Brunch",   url: "/brunch",       icon: Wine },
-  payments:    { title: "Payments",         url: "/payments",     icon: CreditCard },
-  tech:        { title: "Technician View",  url: "/tech",         icon: Smartphone },
-  whatsapp:    { title: "WhatsApp",         url: "/whatsapp",     icon: MessageSquare },
-  settings:    { title: "Settings",         url: "/settings",     icon: Settings },
-  reports:     { title: "Reports",          url: "/guardian/view",icon: LayoutDashboard },
-  checkin:     { title: "Front Desk",       url: "/concierge/desk", icon: Users },
-  exports:     { title: "Export Center",    url: "/guardian/view",icon: CreditCard },
+  checkin: { title: "Front Desk",    url: "/concierge/desk", icon: Users },
+  reports: { title: "Audit & Reports", url: "/guardian/view", icon: LayoutDashboard },
+  tech:    { title: "Artisan View",  url: "/artisan/today", icon: Smartphone },
 };
 
 export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { session, logout } = useSession();
-  const isActive = (url: string) => (url === "/" ? path === "/" : path.startsWith(url));
-
+  const isActive = (url: string) => path.startsWith(url);
   const navKeys = session ? NAV_BY_ROLE[session.role] : [];
 
   return (
@@ -45,7 +28,7 @@ export function AppSidebar() {
           const item = ITEMS[key];
           const active = isActive(item.url);
           return (
-            <Link key={key} to={item.url}
+            <a key={key} href={item.url}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
                 active ? "bg-sidebar-accent text-sidebar-primary font-medium"
                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
@@ -53,7 +36,7 @@ export function AppSidebar() {
               <item.icon className="h-4 w-4" />
               <span>{item.title}</span>
               {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sidebar-primary" />}
-            </Link>
+            </a>
           );
         })}
       </nav>

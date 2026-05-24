@@ -8,20 +8,17 @@ export const ROLE_LABEL: Record<StaffRole, string> = {
   guardian: "The Guardian",
 };
 
+// Only 3 portals remain; admin/manager land at the concierge desk by default.
 export const PORTAL_PATH: Record<StaffRole, string> = {
-  admin: "/admin",
-  manager: "/manager",
+  admin: "/concierge/desk",
+  manager: "/concierge/desk",
   technician: "/artisan/today",
   reception: "/concierge/desk",
   guardian: "/guardian/view",
 };
 
 export const INACTIVITY_MINUTES: Record<StaffRole, number> = {
-  admin: 60,
-  manager: 30,
-  technician: 15,
-  reception: 30,
-  guardian: 30,
+  admin: 60, manager: 30, technician: 15, reception: 30, guardian: 30,
 };
 
 export const ONBOARDING_TIP: Record<StaffRole, string> = {
@@ -32,17 +29,14 @@ export const ONBOARDING_TIP: Record<StaffRole, string> = {
   guardian: "Welcome, Guardian. All data is view-only. Use the Export Center for reports.",
 };
 
-export type NavKey =
-  | "dashboard" | "clients" | "registry" | "founders" | "appointments" | "perks"
-  | "surprises" | "products" | "brunch" | "payments" | "tech"
-  | "whatsapp" | "settings" | "reports" | "checkin" | "exports";
+export type NavKey = "checkin" | "reports" | "tech";
 
 export const NAV_BY_ROLE: Record<StaffRole, NavKey[]> = {
-  admin: ["dashboard","registry","clients","founders","appointments","perks","surprises","products","brunch","payments","tech","whatsapp","settings"],
-  manager: ["dashboard","registry","clients","founders","appointments","perks","surprises","products","brunch","payments","whatsapp"],
+  admin: ["checkin", "reports", "tech"],
+  manager: ["checkin", "reports"],
   technician: ["tech"],
-  reception: ["registry","clients","appointments","payments","whatsapp"],
-  guardian: ["dashboard","payments","appointments","founders","products"],
+  reception: ["checkin"],
+  guardian: ["reports"],
 };
 
 export const CAN = {
