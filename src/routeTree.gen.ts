@@ -20,6 +20,8 @@ import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as BrunchRouteImport } from './routes/brunch'
 import { Route as AppointmentsRouteImport } from './routes/appointments'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReceiptsIdRouteImport } from './routes/receipts.$id'
+import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa.callback'
 
 const WhatsappRoute = WhatsappRouteImport.update({
   id: '/whatsapp',
@@ -76,6 +78,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReceiptsIdRoute = ReceiptsIdRouteImport.update({
+  id: '/receipts/$id',
+  path: '/receipts/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
+  id: '/api/public/mpesa/callback',
+  path: '/api/public/mpesa/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +101,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
   '/whatsapp': typeof WhatsappRoute
+  '/receipts/$id': typeof ReceiptsIdRoute
+  '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +116,8 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
   '/whatsapp': typeof WhatsappRoute
+  '/receipts/$id': typeof ReceiptsIdRoute
+  '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +132,8 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
   '/whatsapp': typeof WhatsappRoute
+  '/receipts/$id': typeof ReceiptsIdRoute
+  '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +149,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/surprises'
     | '/whatsapp'
+    | '/receipts/$id'
+    | '/api/public/mpesa/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +164,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/surprises'
     | '/whatsapp'
+    | '/receipts/$id'
+    | '/api/public/mpesa/callback'
   id:
     | '__root__'
     | '/'
@@ -157,6 +179,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/surprises'
     | '/whatsapp'
+    | '/receipts/$id'
+    | '/api/public/mpesa/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +195,8 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SurprisesRoute: typeof SurprisesRoute
   WhatsappRoute: typeof WhatsappRoute
+  ReceiptsIdRoute: typeof ReceiptsIdRoute
+  ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,6 +278,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/receipts/$id': {
+      id: '/receipts/$id'
+      path: '/receipts/$id'
+      fullPath: '/receipts/$id'
+      preLoaderRoute: typeof ReceiptsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mpesa/callback': {
+      id: '/api/public/mpesa/callback'
+      path: '/api/public/mpesa/callback'
+      fullPath: '/api/public/mpesa/callback'
+      preLoaderRoute: typeof ApiPublicMpesaCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -267,7 +307,19 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SurprisesRoute: SurprisesRoute,
   WhatsappRoute: WhatsappRoute,
+  ReceiptsIdRoute: ReceiptsIdRoute,
+  ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
