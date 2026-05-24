@@ -382,11 +382,27 @@ function StaffTab() {
   const add = useMutation({
     mutationFn: async () => {
       if (!form.full_name) throw new Error("Name required");
-      const { error } = await supabase.from("staff").insert(form as any);
+      if (form.pin && !/^\d{4}$/.test(form.pin)) throw new Error("PIN must be 4 digits");
+      // Insert staff WITHOUT the plain pin column — we hash it via RPC below
+      const { data: created, error } = await supabase
+        .from("staff")
+        .insert({
+          full_name: form.full_name,
+          role: form.role as any,
+          email: form.email || null,
+          phone: form.phone || null,
+        } as any)
+        .select("id")
+        .single();
       if (error) throw error;
+      if (form.pin) {
+        const { setStaffPinFn } = await import("@/lib/auth.functions");
+        const res = await setStaffPinFn({ data: { staffId: created.id, pin: form.pin } });
+        if (!res.ok) throw new Error("Failed to set PIN");
+      }
     },
     onSuccess: () => {
-      toast.success("Staff added");
+      toast.success("Staff added — PIN is live on the login screen");
       setForm({ full_name: "", role: "technician", pin: "", email: "", phone: "" });
       qc.invalidateQueries({ queryKey: ["staff"] });
     },
@@ -412,6 +428,20 @@ function StaffTab() {
     },
   });
 
+  const setPin = useMutation({
+    mutationFn: async ({ id, pin }: { id: string; pin: string }) => {
+      if (!/^\d{4}$/.test(pin)) throw new Error("PIN must be 4 digits");
+      const { setStaffPinFn } = await import("@/lib/auth.functions");
+      const res = await setStaffPinFn({ data: { staffId: id, pin } });
+      if (!res.ok) throw new Error("Failed to set PIN");
+    },
+    onSuccess: () => {
+      toast.success("PIN updated — active on the login screen");
+      qc.invalidateQueries({ queryKey: ["staff"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const roleColors: Record<string, string> = {
     admin: "bg-primary/20 text-primary",
     manager: "bg-amber-100 text-amber-800",
@@ -421,7 +451,7 @@ function StaffTab() {
 
   return (
     <div className="space-y-6">
-      <Section title="Add Staff Member">
+      <Section title="Add Staff Member" description="Setting a 4-digit PIN here makes it immediately usable on the login screen.">
         <div className="grid md:grid-cols-2 gap-3">
           <Field label="Full Name"><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></Field>
           <Field label="Role">
@@ -435,27 +465,24 @@ function StaffTab() {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="PIN (4 digits)"><Input maxLength={4} value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} /></Field>
+          <Field label="PIN (4 digits)"><Input maxLength={4} value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") })} /></Field>
           <Field label="Email"><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
           <Field label="Phone"><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
         </div>
         <Button onClick={() => add.mutate()}><Plus className="h-4 w-4 mr-2" />Add Staff</Button>
       </Section>
 
-      <Section title="Team">
+      <Section title="Team" description="Toggle access, reset PINs (login-ready), and set commission rates per technician.">
         <div className="space-y-2">
           {(staff as any[]).map((s) => (
-            <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg border">
-              <div className="flex-1">
-                <div className="font-medium">{s.full_name}</div>
-                <div className="text-xs text-muted-foreground">{s.email || "—"} · PIN {s.pin || "—"}</div>
-              </div>
-              <Badge className={roleColors[s.role] || ""}>{s.role}</Badge>
-              <Switch checked={s.active} onCheckedChange={(v) => toggle.mutate({ id: s.id, active: v })} />
-              <Button variant="ghost" size="sm" onClick={() => del.mutate(s.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
+            <StaffRow
+              key={s.id}
+              staff={s}
+              roleClass={roleColors[s.role] || ""}
+              onToggle={(active) => toggle.mutate({ id: s.id, active })}
+              onDelete={() => del.mutate(s.id)}
+              onSetPin={(pin) => setPin.mutate({ id: s.id, pin })}
+            />
           ))}
           {staff.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">No staff yet.</p>}
         </div>
@@ -463,6 +490,174 @@ function StaffTab() {
     </div>
   );
 }
+
+function StaffRow({ staff, roleClass, onToggle, onDelete, onSetPin }: {
+  staff: any;
+  roleClass: string;
+  onToggle: (active: boolean) => void;
+  onDelete: () => void;
+  onSetPin: (pin: string) => void;
+}) {
+  const [newPin, setNewPin] = useState("");
+  const [showCommission, setShowCommission] = useState(false);
+  const pinSet = !!staff.pin_hash;
+
+  return (
+    <div className="rounded-lg border bg-card">
+      <div className="flex items-center gap-3 p-3">
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">{staff.full_name}</div>
+          <div className="text-xs text-muted-foreground">
+            {staff.email || "—"} ·{" "}
+            <span className={pinSet ? "text-emerald-700" : "text-amber-700"}>
+              {pinSet ? "PIN set" : "No PIN"}
+            </span>
+            {staff.must_change_pin && pinSet && <span className="ml-1 text-amber-700">(must change)</span>}
+          </div>
+        </div>
+        <Badge className={roleClass}>{staff.role}</Badge>
+        <Switch checked={staff.active} onCheckedChange={onToggle} />
+        <Button variant="ghost" size="sm" onClick={onDelete}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+      <div className="px-3 pb-3 flex flex-wrap gap-2 items-center border-t pt-3">
+        <Input
+          className="w-28"
+          maxLength={4}
+          placeholder="New PIN"
+          value={newPin}
+          onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={newPin.length !== 4}
+          onClick={() => { onSetPin(newPin); setNewPin(""); }}
+        >
+          Set login PIN
+        </Button>
+        {staff.role === "technician" && (
+          <Button size="sm" variant="ghost" onClick={() => setShowCommission((v) => !v)}>
+            {showCommission ? "Hide" : "Commission"}
+          </Button>
+        )}
+      </div>
+      {showCommission && staff.role === "technician" && (
+        <CommissionEditor staffId={staff.id} />
+      )}
+    </div>
+  );
+}
+
+function CommissionEditor({ staffId }: { staffId: string }) {
+  const qc = useQueryClient();
+  const { data: current } = useQuery({
+    queryKey: ["commission-active", staffId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("staff_commission_settings")
+        .select("*")
+        .eq("staff_id", staffId)
+        .eq("is_active", true)
+        .order("effective_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const { data: history = [] } = useQuery({
+    queryKey: ["commission-history", staffId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("staff_commission_settings")
+        .select("id, commission_percentage, commission_type, fixed_amount_ksh, effective_date, notes, created_at")
+        .eq("staff_id", staffId)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      return data ?? [];
+    },
+  });
+
+  const [pct, setPct] = useState<string>("");
+  const [type, setType] = useState<string>("percentage_of_sale");
+  const [fixed, setFixed] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+
+  useEffect(() => {
+    setPct(String(current?.commission_percentage ?? 0));
+    setType((current?.commission_type as string) ?? "percentage_of_sale");
+    setFixed(String(current?.fixed_amount_ksh ?? 0));
+  }, [current]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      // Deactivate prior settings, insert new active row
+      await supabase.from("staff_commission_settings").update({ is_active: false }).eq("staff_id", staffId).eq("is_active", true);
+      const { error } = await supabase.from("staff_commission_settings").insert({
+        staff_id: staffId,
+        commission_percentage: Number(pct) || 0,
+        commission_type: type,
+        fixed_amount_ksh: Number(fixed) || 0,
+        notes: notes || null,
+        is_active: true,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Commission rate updated");
+      setNotes("");
+      qc.invalidateQueries({ queryKey: ["commission-active", staffId] });
+      qc.invalidateQueries({ queryKey: ["commission-history", staffId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <div className="px-3 pb-3 border-t bg-muted/30 space-y-3 pt-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Field label="Rate %">
+          <Input type="number" min={0} max={100} value={pct} onChange={(e) => setPct(e.target.value)} />
+        </Field>
+        <Field label="Type">
+          <Select value={type} onValueChange={setType}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percentage_of_sale">% of sale</SelectItem>
+              <SelectItem value="fixed_per_service">Fixed / service</SelectItem>
+              <SelectItem value="hybrid">Hybrid</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Fixed KSH">
+          <Input type="number" min={0} value={fixed} onChange={(e) => setFixed(e.target.value)} />
+        </Field>
+        <Field label="Notes">
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="reason for change" />
+        </Field>
+      </div>
+      <Button size="sm" onClick={() => save.mutate()}>
+        <Save className="h-4 w-4 mr-2" /> Save commission rate
+      </Button>
+      {history.length > 0 && (
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">History</Label>
+          <ul className="text-xs space-y-1">
+            {history.map((h: any) => (
+              <li key={h.id} className="flex items-center gap-2 bg-background rounded px-2 py-1">
+                <span className="font-mono text-[10px] text-muted-foreground w-20">{h.effective_date}</span>
+                <span>{Number(h.commission_percentage)}% · {h.commission_type}</span>
+                {Number(h.fixed_amount_ksh) > 0 && <span className="opacity-70">+KSH {h.fixed_amount_ksh}</span>}
+                {h.notes && <span className="opacity-70 truncate">— {h.notes}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 // ---------- NOTIFICATIONS ----------
 const TEMPLATE_KEYS = [
