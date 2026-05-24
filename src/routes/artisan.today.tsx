@@ -1072,7 +1072,7 @@ function Step4Confirm({
     <div className="space-y-3">
       <div className="bg-white border border-[#d4b896] rounded-lg p-4 space-y-2 text-sm">
         <Row icon={<User className="h-4 w-4" />} label="Client" value={client.full_name} />
-        <Row icon={<Sparkles className="h-4 w-4" />} label="Service" value={meta.label} />
+        <Row icon={<Sparkles className="h-4 w-4" />} label="Service" value={label} />
         <Row icon={<Calendar className="h-4 w-4" />} label="When" value={`${date} · ${time.slice(0, 5)}`} />
         <Row icon={<Clock className="h-4 w-4" />} label="Duration" value={`${duration} min`} />
         <Row icon={<MapPin className="h-4 w-4" />} label="Location" value={location === "travel" ? `Travel · ${travelAddr}` : "Studio"} />
