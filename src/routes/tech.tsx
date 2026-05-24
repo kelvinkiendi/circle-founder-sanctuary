@@ -363,7 +363,7 @@ function Schedule({ tech, onLogout }: { tech: string; onLogout: () => void }) {
         localStorage.setItem("coterie_offline_queue", JSON.stringify(q));
         return { offline: true };
       }
-      const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
+      const { error } = await supabase.from("appointments").update({ status: status as any }).eq("id", id);
       if (error) throw error;
       return { offline: false };
     },
