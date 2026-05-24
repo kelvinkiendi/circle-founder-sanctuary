@@ -272,6 +272,7 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         <TabsContent value="recent">
           <Card>
