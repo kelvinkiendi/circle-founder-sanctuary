@@ -1051,7 +1051,7 @@ function Step4Confirm({
         await supabase.from("whatsapp_messages").insert({
           client_id: client.id,
           template_key: "booking_confirmation",
-          body: `Hi ${client.full_name}, your ${meta.label} is confirmed for ${date} at ${time.slice(0, 5)} (${location === "travel" ? "travel" : "studio"}). — COTERIE`,
+          body: `Hi ${client.full_name}, your ${label} is confirmed for ${date} at ${time.slice(0, 5)} (${location === "travel" ? "travel" : "studio"}). — COTERIE`,
           status: "queued",
           created_by: techTag,
         });
