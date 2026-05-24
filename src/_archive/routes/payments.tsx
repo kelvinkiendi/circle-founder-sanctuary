@@ -326,9 +326,11 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Outstanding Installments</CardTitle>
-              <Button size="sm" variant="outline" onClick={async () => {
-                const r = await sweep(); toast.success(`Suspension sweep complete — ${r.suspended} updated`); loadAll();
-              }}>Run 45-day suspension sweep</Button>
+              {!readOnly && (
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const r = await sweep(); toast.success(`Suspension sweep complete — ${r.suspended} updated`); loadAll();
+                }}>Run 45-day suspension sweep</Button>
+              )}
             </CardHeader>
             <CardContent>
               <Table>
