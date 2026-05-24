@@ -55,7 +55,7 @@ function statusVariant(s: string) {
   return "secondary";
 }
 
-export function PaymentsPage() {
+export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) {
   const fetchSummary = useServerFn(getPaymentSummary);
   const fetchOutstanding = useServerFn(getOutstandingInstallments);
   const computeAmt = useServerFn(computePaymentAmount);
