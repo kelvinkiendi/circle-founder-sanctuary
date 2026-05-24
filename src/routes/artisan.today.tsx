@@ -500,7 +500,29 @@ function Step2Service({
           </div>
           {location === "travel" && (
             <>
-              <input value={travelAddr} onChange={(e) => setTravelAddr(e.target.value)} placeholder="Client address" className="w-full mt-2 px-3 py-2 border border-[#d4b896] rounded-lg bg-white text-sm" />
+              <div className="mt-2 flex gap-2">
+                <input value={travelAddr} onChange={(e) => setTravelAddr(e.target.value)} placeholder="Client address" className="flex-1 px-3 py-2 border border-[#d4b896] rounded-lg bg-white text-sm" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!("geolocation" in navigator)) { toast.error("Geolocation unavailable"); return; }
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        const link = `https://maps.google.com/?q=${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+                        setTravelAddr(travelAddr ? `${travelAddr} (${link})` : link);
+                        toast.success("Location pinned");
+                      },
+                      (err) => toast.error(`GPS: ${err.message}`),
+                      { enableHighAccuracy: true, timeout: 8000 },
+                    );
+                  }}
+                  className="px-3 py-2 border border-[#5D4037]/30 rounded-lg text-xs bg-[#F5F5DC] active:scale-95 flex items-center gap-1"
+                  title="Use GPS"
+                >
+                  <MapPin className="h-3.5 w-3.5" /> GPS
+                </button>
+              </div>
               <p className="text-[10px] text-amber-700 mt-1">Outside Kilimani core may add KSH 500 transport.</p>
             </>
           )}
