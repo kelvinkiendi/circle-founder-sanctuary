@@ -560,7 +560,7 @@ function BulkImport({ onDone }: { onDone: () => void }) {
   const runImport = async () => {
     setImporting(true);
     try {
-      const payload = valid.map((r) => ({
+      const toRow = (r: ParsedRow) => ({
         full_name: r.full_name,
         phone: r.phone,
         whatsapp_number: r.whatsapp ? normalizeKePhone(r.whatsapp) : r.phone,
@@ -570,20 +570,42 @@ function BulkImport({ onDone }: { onDone: () => void }) {
         client_type: (r.client_type === "founder" || r.client_type === "prospect" ? r.client_type : "regular") as "regular" | "prospect" | "founder",
         notes: r.notes || null,
         first_visit_date: r.first_visit_date || null,
-      }));
-      const { data, error } = await supabase.from("clients").insert(payload).select("id, client_type");
-      if (error) throw error;
+      });
+
+      // Insert net-new
+      const insertPayload = valid.map(toRow);
+      let inserted: any[] = [];
+      if (insertPayload.length) {
+        const { data, error } = await supabase.from("clients").insert(insertPayload).select("id, client_type");
+        if (error) throw error;
+        inserted = data ?? [];
+      }
+
+      // Optionally update duplicates by phone
+      let updatedCount = 0;
+      if (dupMode === "update" && dups.length) {
+        for (const r of dups) {
+          const patch = toRow(r);
+          const { error } = await supabase.from("clients").update(patch).eq("phone", r.phone);
+          if (!error) updatedCount += 1;
+        }
+      }
 
       // Add prospects to waitlist
-      const prospects = (data ?? []).filter((d: any) => d.client_type === "prospect");
+      const prospects = inserted.filter((d: any) => d.client_type === "prospect");
       if (prospects.length) {
         await supabase.from("founder_waitlist").insert(
           prospects.map((p: any) => ({ client_id: p.id, priority_score: 10 })),
         );
       }
 
-      setResult({ added: valid.length, skipped: dups.length, errors: errs.length });
-      toast.success(`Imported ${valid.length} clients.`);
+      setResult({
+        added: insertPayload.length,
+        updated: updatedCount,
+        skipped: dupMode === "skip" ? dups.length : 0,
+        errors: errs.length,
+      });
+      toast.success(`Imported ${insertPayload.length} new${updatedCount ? `, updated ${updatedCount}` : ""}.`);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
