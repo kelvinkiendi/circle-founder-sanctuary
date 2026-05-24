@@ -144,7 +144,25 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    const checkoutId = genCheckoutId();
+    const phone = normalizeMsisdn(data.phone);
+    let checkoutId = genCheckoutId();
+    let live = false;
+    try {
+      const cbUrl = process.env.MPESA_CALLBACK_URL
+        ?? `${process.env.PUBLIC_BASE_URL ?? ""}/api/public/mpesa/callback`;
+      const real = await darajaStkPush({
+        amount: data.amount_ksh,
+        phone,
+        accountRef: data.founder_id ? `F${data.founder_id.slice(0, 8)}` : `C${data.client_id.slice(0, 8)}`,
+        description: data.description ?? "COTERIE",
+        callbackUrl: cbUrl,
+      });
+      if (real) { checkoutId = real; live = true; }
+    } catch (e: any) {
+      // Surface upstream error but still record an attempt
+      console.error("Daraja STK push error:", e?.message);
+    }
+
     const { data: row, error } = await supabaseAdmin
       .from("payments")
       .insert({
@@ -152,7 +170,7 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
         founder_id: data.founder_id ?? null,
         payment_type: data.payment_type,
         amount_ksh: data.amount_ksh,
-        phone: data.phone,
+        phone,
         status: "pending",
         mpesa_checkout_request_id: checkoutId,
         description: data.description ?? null,
@@ -164,13 +182,14 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // In production: call Safaricom Daraja STK Push here using process.env.MPESA_*
-    // For now we return the pending payment; the M-Pesa callback /api/public/mpesa/callback updates it.
     return {
       payment_id: row.id,
       checkout_request_id: checkoutId,
       status: "pending" as const,
-      prompt: `STK Push sent to ${data.phone}. Awaiting confirmation.`,
+      live,
+      prompt: live
+        ? `STK Push sent to ${phone}. Confirm on phone.`
+        : `Simulated push to ${phone} (Daraja creds not configured).`,
     };
   });
 
