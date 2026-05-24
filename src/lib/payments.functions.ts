@@ -124,7 +124,7 @@ export const updatePaymentStatus = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    const patch: Record<string, unknown> = { status: data.status };
+    const patch: any = { status: data.status };
     if (data.status === "paid") {
       patch.paid_at = new Date().toISOString();
       patch.mpesa_receipt_number = data.mpesa_receipt ?? `SIM${Math.floor(Math.random() * 1e9)}`;
