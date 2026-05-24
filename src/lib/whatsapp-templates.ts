@@ -16,7 +16,8 @@ export type TemplateKey =
   | "payment_confirmation"
   | "tech_reminder"
   | "new_client_welcome"
-  | "service_followup_24h";
+  | "service_followup_24h"
+  | "visit_reminder_21d";
 
 export interface TemplateMeta {
   key: TemplateKey;
