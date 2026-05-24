@@ -48,7 +48,7 @@ const BLOCKED_REASONS = ["Lunch Break", "Personal Appointment", "Sick Leave", "T
 // ============ Root ============
 function ArtisanScheduler() {
   const { session, logout } = useSession();
-  const [sheet, setSheet] = useState<"new" | "block" | null>(null);
+  const [sheet, setSheet] = useState<"new" | "block" | "walkin-bill" | null>(null);
   const [billingAppt, setBillingAppt] = useState<any | null>(null);
   const [rebookClientId, setRebookClientId] = useState<string | null>(null);
   const [rebookService, setRebookService] = useState<ServiceType | null>(null);
