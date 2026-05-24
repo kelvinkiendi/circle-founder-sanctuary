@@ -33,7 +33,10 @@ export const Route = createFileRoute("/api/public/mpesa/callback")({
               .single();
 
             if (payment) {
-              const receiptNo = `CTR-${new Date().toISOString().slice(0,10).replace(/-/g,"")}-${receipt.slice(-5)}`;
+              const d = new Date();
+              const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2,"0")}`;
+              const tail = (receipt || Math.random().toString(36).slice(2)).toUpperCase().replace(/[^A-Z0-9]/g,"").slice(-4) || "XXXX";
+              const receiptNo = `COT-${ym}-${tail}`;
               await supabaseAdmin.from("receipts").insert({
                 payment_id: payment.id,
                 client_id: payment.client_id,
