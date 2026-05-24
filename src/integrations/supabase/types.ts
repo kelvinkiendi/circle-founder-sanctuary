@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          entity: string | null
+          entity_id: string | null
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           appointment_type: Database["public"]["Enums"]["appointment_type"]
@@ -531,6 +582,69 @@ export type Database = {
         }
         Relationships: []
       }
+      staff: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          pin: string | null
+          role: Database["public"]["Enums"]["staff_role"]
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+          pin?: string | null
+          role?: Database["public"]["Enums"]["staff_role"]
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          pin?: string | null
+          role?: Database["public"]["Enums"]["staff_role"]
+        }
+        Relationships: []
+      }
+      studio_locations: {
+        Row: {
+          active: boolean
+          address: string | null
+          created_at: string
+          id: string
+          is_primary: boolean
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       surprise_moments_log: {
         Row: {
           awarded_date: string
@@ -674,6 +788,7 @@ export type Database = {
         | "gloves"
         | "magnetic_clasp"
       product_launch: "prelaunch" | "public"
+      staff_role: "admin" | "manager" | "technician" | "reception"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -854,6 +969,7 @@ export const Constants = {
         "magnetic_clasp",
       ],
       product_launch: ["prelaunch", "public"],
+      staff_role: ["admin", "manager", "technician", "reception"],
     },
   },
 } as const
