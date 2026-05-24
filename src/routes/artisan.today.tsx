@@ -129,18 +129,24 @@ function ArtisanScheduler() {
       </main>
 
       {/* Floating actions */}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-30">
+      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-30 flex-wrap justify-center px-3">
         <button
           onClick={() => setSheet("block")}
-          className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037]/30 rounded-full px-4 py-3 text-sm font-medium shadow-lg active:scale-95 transition flex items-center gap-2"
+          className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037]/30 rounded-full px-3 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
         >
-          <Coffee className="h-4 w-4" /> Block Time
+          <Coffee className="h-3.5 w-3.5" /> Block
+        </button>
+        <button
+          onClick={() => setSheet("walkin-bill")}
+          className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037] rounded-full px-4 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
+        >
+          <Wallet className="h-4 w-4" /> Bill Client
         </button>
         <button
           onClick={() => { setRebookClientId(null); setRebookService(null); setSheet("new"); }}
-          className="bg-[#5D4037] text-[#F5F5DC] rounded-full px-5 py-3 text-sm font-medium shadow-lg active:scale-95 transition flex items-center gap-2"
+          className="bg-[#5D4037] text-[#F5F5DC] rounded-full px-4 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
         >
-          <Plus className="h-5 w-5" /> Add Booking
+          <Plus className="h-4 w-4" /> Booking
         </button>
       </div>
 
