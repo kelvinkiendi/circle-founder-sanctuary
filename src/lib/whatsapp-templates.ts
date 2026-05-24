@@ -179,6 +179,14 @@ export const WHATSAPP_TEMPLATES: TemplateMeta[] = [
     render: (x) =>
       `Hi ${v(x, "name")}, how are your nails feeling after yesterday's ${v(x, "service")}? If you need a Gel Rescue within 7 days, just WhatsApp us. — COTERIE`,
   },
+  {
+    key: "visit_reminder_21d",
+    label: "19 · 21-Day Visit Reminder",
+    description: "Auto-sent 21 days after the client's last appointment.",
+    variables: ["name", "last_date"],
+    render: (x) =>
+      `Hi ${v(x, "name")} ✨ It's been 3 weeks since your last sanctuary visit (${v(x, "last_date")}). Your nails are likely ready for a refresh — reply to book your next session at COTERIE. — COTERIE 💅`,
+  },
 ];
 
 export function getTemplate(key: TemplateKey) {
