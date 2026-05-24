@@ -717,10 +717,35 @@ function Step1Client({ onPick }: { onPick: (c: any) => void }) {
 
 // ============ Step 2: Service & Time ============
 function Step2Service({
-  client, service, setService, date, setDate, time, setTime, duration, setDuration,
+  client, service, setService, customService, setCustomService,
+  date, setDate, time, setTime, duration, setDuration,
   location, setLocation, travelAddr, setTravelAddr, notes, setNotes, techTag, onBack, onNext,
 }: any) {
   const today = new Date().toISOString().slice(0, 10);
+
+  // Load active services from catalog (admin-managed)
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["booking-services-catalog"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("services")
+        .select("id, name, price_ksh, duration_minutes, category, status")
+        .eq("status", "active").order("display_order").order("name");
+      return data ?? [];
+    },
+  });
+
+  // Map a catalog service's category/name to the appointment_type enum
+  const mapToEnum = (svc: any): ServiceType => {
+    const n = String(svc.name).toLowerCase();
+    if (n.includes("weekly") || n.includes("refresh")) return "weekly_refresh";
+    if (n.includes("rescue")) return "gel_rescue";
+    if (n.includes("travel") || n.includes("touch")) return "travel_touchup";
+    if (n.includes("gel") && n.includes("pedi")) return "gel_pedicure";
+    if (n.includes("gel")) return "gel_manicure";
+    if (n.includes("pedi")) return "full_pedicure";
+    return "full_manicure";
+  };
+
 
   // Existing appts for this tech on this date — to block overlapping slots
   const { data: dayAppts } = useQuery({
