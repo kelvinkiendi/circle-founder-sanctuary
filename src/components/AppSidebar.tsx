@@ -10,6 +10,7 @@ import {
   Wine,
   Settings,
   MessageSquare,
+  CreditCard,
 } from "lucide-react";
 
 const items = [
@@ -21,6 +22,7 @@ const items = [
   { title: "Surprise Moments", url: "/surprises", icon: Gift },
   { title: "Product Vault", url: "/products", icon: Package },
   { title: "Founder Brunch", url: "/brunch", icon: Wine },
+  { title: "Payments", url: "/payments", icon: CreditCard },
   { title: "WhatsApp", url: "/whatsapp", icon: MessageSquare },
   { title: "Settings", url: "/settings", icon: Settings },
 ];

@@ -318,6 +318,69 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount_ksh: number
+          client_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          failure_reason: string | null
+          founder_id: string | null
+          id: string
+          mpesa_checkout_request_id: string | null
+          mpesa_receipt_number: string | null
+          paid_at: string | null
+          payment_type: Database["public"]["Enums"]["payment_type"]
+          phone: string
+          related_appointment_id: string | null
+          related_product_id: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount_ksh: number
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          failure_reason?: string | null
+          founder_id?: string | null
+          id?: string
+          mpesa_checkout_request_id?: string | null
+          mpesa_receipt_number?: string | null
+          paid_at?: string | null
+          payment_type: Database["public"]["Enums"]["payment_type"]
+          phone: string
+          related_appointment_id?: string | null
+          related_product_id?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount_ksh?: number
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          failure_reason?: string | null
+          founder_id?: string | null
+          id?: string
+          mpesa_checkout_request_id?: string | null
+          mpesa_receipt_number?: string | null
+          paid_at?: string | null
+          payment_type?: Database["public"]["Enums"]["payment_type"]
+          phone?: string
+          related_appointment_id?: string | null
+          related_product_id?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       perks_usage: {
         Row: {
           created_at: string
@@ -432,6 +495,42 @@ export type Database = {
         }
         Relationships: []
       }
+      receipts: {
+        Row: {
+          amount_ksh: number
+          client_id: string
+          description: string | null
+          founder_id: string | null
+          id: string
+          issued_at: string
+          payment_id: string
+          pdf_url: string | null
+          receipt_number: string
+        }
+        Insert: {
+          amount_ksh: number
+          client_id: string
+          description?: string | null
+          founder_id?: string | null
+          id?: string
+          issued_at?: string
+          payment_id: string
+          pdf_url?: string | null
+          receipt_number: string
+        }
+        Update: {
+          amount_ksh?: number
+          client_id?: string
+          description?: string | null
+          founder_id?: string | null
+          id?: string
+          issued_at?: string
+          payment_id?: string
+          pdf_url?: string | null
+          receipt_number?: string
+        }
+        Relationships: []
+      }
       surprise_moments_log: {
         Row: {
           awarded_date: string
@@ -524,7 +623,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      suspend_overdue_founders: { Args: never; Returns: number }
     }
     Enums: {
       appointment_location: "studio" | "travel"
@@ -550,6 +649,16 @@ export type Database = {
       client_type: "regular" | "founder"
       founder_status: "active" | "expired" | "pending"
       payment_method: "full" | "installment"
+      payment_status: "pending" | "paid" | "failed" | "cancelled"
+      payment_type:
+        | "enrollment_full"
+        | "enrollment_installment_1"
+        | "enrollment_installment_2"
+        | "travel_transport"
+        | "full_service_founder"
+        | "product_purchase"
+        | "emergency_service"
+        | "other"
       perk_status: "available" | "used" | "expired" | "forfeited"
       perk_type:
         | "weekly_refresh"
@@ -717,6 +826,17 @@ export const Constants = {
       client_type: ["regular", "founder"],
       founder_status: ["active", "expired", "pending"],
       payment_method: ["full", "installment"],
+      payment_status: ["pending", "paid", "failed", "cancelled"],
+      payment_type: [
+        "enrollment_full",
+        "enrollment_installment_1",
+        "enrollment_installment_2",
+        "travel_transport",
+        "full_service_founder",
+        "product_purchase",
+        "emergency_service",
+        "other",
+      ],
       perk_status: ["available", "used", "expired", "forfeited"],
       perk_type: [
         "weekly_refresh",

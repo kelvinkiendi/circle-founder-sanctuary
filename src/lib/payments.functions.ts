@@ -1,0 +1,243 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+const FOUNDER_DISCOUNT = 0.15;
+const ENROLL_FULL = 25000;
+const ENROLL_INSTALLMENT_1 = 12000;
+const ENROLL_INSTALLMENT_2 = 13000;
+const TRAVEL_SURCHARGE = 500;
+
+const PaymentTypeEnum = z.enum([
+  "enrollment_full",
+  "enrollment_installment_1",
+  "enrollment_installment_2",
+  "travel_transport",
+  "full_service_founder",
+  "product_purchase",
+  "emergency_service",
+  "other",
+]);
+
+function genReceiptNumber() {
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  return `CTR-${stamp}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+}
+
+function genCheckoutId() {
+  return `ws_CO_${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
+
+// Compute amount for a payment type given context
+export const computePaymentAmount = createServerFn({ method: "POST" })
+  .inputValidator((d: { payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
+    z.object({
+      payment_type: PaymentTypeEnum,
+      base_amount: z.number().optional(),
+      outside_area: z.boolean().optional(),
+      apply_founder_rate: z.boolean().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    switch (data.payment_type) {
+      case "enrollment_full": return { amount: ENROLL_FULL };
+      case "enrollment_installment_1": return { amount: ENROLL_INSTALLMENT_1 };
+      case "enrollment_installment_2": return { amount: ENROLL_INSTALLMENT_2 };
+      case "travel_transport":
+        return { amount: data.outside_area ? TRAVEL_SURCHARGE : 0 };
+      case "full_service_founder": {
+        const b = data.base_amount ?? 0;
+        return { amount: data.apply_founder_rate ? Math.round(b * (1 - FOUNDER_DISCOUNT)) : b };
+      }
+      case "product_purchase":
+      case "emergency_service":
+      case "other":
+        return { amount: data.base_amount ?? 0 };
+    }
+  });
+
+// Initiate STK Push (simulated — integrates with Daraja when credentials added)
+export const initiateMpesaStkPush = createServerFn({ method: "POST" })
+  .inputValidator((d: {
+    client_id: string;
+    founder_id?: string | null;
+    payment_type: string;
+    amount_ksh: number;
+    phone: string;
+    description?: string;
+    related_appointment_id?: string | null;
+    related_product_id?: string | null;
+    due_date?: string | null;
+  }) =>
+    z.object({
+      client_id: z.string().uuid(),
+      founder_id: z.string().uuid().nullable().optional(),
+      payment_type: PaymentTypeEnum,
+      amount_ksh: z.number().positive(),
+      phone: z.string().min(9),
+      description: z.string().optional(),
+      related_appointment_id: z.string().uuid().nullable().optional(),
+      related_product_id: z.string().uuid().nullable().optional(),
+      due_date: z.string().nullable().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const checkoutId = genCheckoutId();
+    const { data: row, error } = await supabaseAdmin
+      .from("payments")
+      .insert({
+        client_id: data.client_id,
+        founder_id: data.founder_id ?? null,
+        payment_type: data.payment_type,
+        amount_ksh: data.amount_ksh,
+        phone: data.phone,
+        status: "pending",
+        mpesa_checkout_request_id: checkoutId,
+        description: data.description ?? null,
+        related_appointment_id: data.related_appointment_id ?? null,
+        related_product_id: data.related_product_id ?? null,
+        due_date: data.due_date ?? null,
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+
+    // In production: call Safaricom Daraja STK Push here using process.env.MPESA_*
+    // For now we return the pending payment; the M-Pesa callback /api/public/mpesa/callback updates it.
+    return {
+      payment_id: row.id,
+      checkout_request_id: checkoutId,
+      status: "pending" as const,
+      prompt: `STK Push sent to ${data.phone}. Awaiting confirmation.`,
+    };
+  });
+
+// Manually mark payment paid/failed (admin reconciliation + simulation)
+export const updatePaymentStatus = createServerFn({ method: "POST" })
+  .inputValidator((d: { payment_id: string; status: "paid" | "failed" | "cancelled"; mpesa_receipt?: string; failure_reason?: string }) =>
+    z.object({
+      payment_id: z.string().uuid(),
+      status: z.enum(["paid", "failed", "cancelled"]),
+      mpesa_receipt: z.string().optional(),
+      failure_reason: z.string().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const patch: any = { status: data.status };
+    if (data.status === "paid") {
+      patch.paid_at = new Date().toISOString();
+      patch.mpesa_receipt_number = data.mpesa_receipt ?? `SIM${Math.floor(Math.random() * 1e9)}`;
+    } else if (data.status === "failed") {
+      patch.failure_reason = data.failure_reason ?? "Payment failed";
+    }
+    const { data: payment, error } = await supabaseAdmin
+      .from("payments").update(patch).eq("id", data.payment_id).select().single();
+    if (error) throw new Error(error.message);
+
+    // Auto-generate receipt on success
+    let receipt = null;
+    if (data.status === "paid") {
+      const receiptNo = genReceiptNumber();
+      const { data: r } = await supabaseAdmin.from("receipts").insert({
+        payment_id: payment.id,
+        client_id: payment.client_id,
+        founder_id: payment.founder_id,
+        receipt_number: receiptNo,
+        amount_ksh: payment.amount_ksh,
+        description: payment.description,
+      }).select().single();
+      receipt = r;
+    }
+    return { payment, receipt };
+  });
+
+// Retry: send a fresh STK push for a failed/cancelled payment
+export const retryPayment = createServerFn({ method: "POST" })
+  .inputValidator((d: { payment_id: string }) => z.object({ payment_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: original, error } = await supabaseAdmin
+      .from("payments").select("*").eq("id", data.payment_id).single();
+    if (error || !original) throw new Error("Payment not found");
+
+    const checkoutId = genCheckoutId();
+    const { data: row, error: insErr } = await supabaseAdmin.from("payments").insert({
+      client_id: original.client_id,
+      founder_id: original.founder_id,
+      payment_type: original.payment_type,
+      amount_ksh: original.amount_ksh,
+      phone: original.phone,
+      status: "pending",
+      mpesa_checkout_request_id: checkoutId,
+      description: `Retry — ${original.description ?? ""}`.trim(),
+      related_appointment_id: original.related_appointment_id,
+      related_product_id: original.related_product_id,
+      due_date: original.due_date,
+    }).select().single();
+    if (insErr) throw new Error(insErr.message);
+    return { payment_id: row.id, checkout_request_id: checkoutId };
+  });
+
+// Payment dashboard summary
+export const getPaymentSummary = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const now = new Date();
+    const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const { data: payments } = await supabaseAdmin
+      .from("payments")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    const all = payments || [];
+    const paid = all.filter((p: any) => p.status === "paid");
+    const sumSince = (since: Date) =>
+      paid.filter((p: any) => new Date(p.paid_at ?? p.updated_at) >= since)
+          .reduce((s: number, p: any) => s + Number(p.amount_ksh), 0);
+
+    return {
+      today_total: sumSince(dayStart),
+      week_total: sumSince(weekStart),
+      month_total: sumSince(monthStart),
+      pending_count: all.filter((p: any) => p.status === "pending").length,
+      failed_count: all.filter((p: any) => p.status === "failed").length,
+      recent: all.slice(0, 50),
+    };
+  });
+
+// Outstanding installments
+export const getOutstandingInstallments = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { data: founders } = await supabaseAdmin
+      .from("founder_circle")
+      .select("id, founder_number, client_id, enrollment_date, total_paid_ksh, enrollment_fee_paid, payment_method, status, clients(full_name, phone)")
+      .eq("payment_method", "installment")
+      .eq("enrollment_fee_paid", false);
+
+    return (founders || []).map((f: any) => {
+      const enrolledAt = new Date(f.enrollment_date);
+      const dueDate = new Date(enrolledAt.getTime() + 45 * 86400000);
+      const daysOverdue = Math.floor((Date.now() - dueDate.getTime()) / 86400000);
+      return {
+        founder_id: f.id,
+        founder_number: f.founder_number,
+        client_name: f.clients?.full_name,
+        phone: f.clients?.phone,
+        amount_owed: ENROLL_INSTALLMENT_2,
+        due_date: dueDate.toISOString().slice(0, 10),
+        days_overdue: Math.max(0, daysOverdue),
+        status: f.status,
+      };
+    });
+  });
+
+// Run suspension sweep
+export const runSuspensionSweep = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const { data, error } = await supabaseAdmin.rpc("suspend_overdue_founders");
+    if (error) throw new Error(error.message);
+    return { suspended: data ?? 0 };
+  });
