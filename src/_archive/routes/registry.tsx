@@ -27,6 +27,8 @@ type ClientRow = {
   first_visit_date: string | null;
   avatar_url: string | null;
   created_at: string;
+  last_appointment_date: string | null;
+  next_visit_predicted_date: string | null;
 };
 
 const REFERRAL_SOURCES = ["Instagram", "Referral", "Walk-in", "Google", "Friend", "Other"];
@@ -435,6 +437,28 @@ function QuickAddModal({
               <input type="checkbox" checked={sendWelcomeOpt} onChange={(e) => setSendWelcomeOpt(e.target.checked)} />
               Send WhatsApp welcome message after saving
             </label>
+          </Field>
+        )}
+        {client && (
+          <Field label="" span={2}>
+            <div className="rounded-md border border-border bg-muted/30 p-3 grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Last Appointment</div>
+                <div className="text-sm font-medium mt-1">
+                  {client.last_appointment_date
+                    ? new Date(client.last_appointment_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                    : "— no visits yet —"}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Predicted Next Visit · auto +21d</div>
+                <div className="text-sm font-medium mt-1 text-primary">
+                  {client.next_visit_predicted_date
+                    ? new Date(client.next_visit_predicted_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                    : "—"}
+                </div>
+              </div>
+            </div>
           </Field>
         )}
       </div>
