@@ -175,6 +175,14 @@ function ArtisanScheduler() {
           onDone={() => { setBillingAppt(null); qc.invalidateQueries({ queryKey: ["artisan-collection"] }); }}
         />
       )}
+      {sheet === "walkin-bill" && (
+        <BillingSheet
+          appt={null}
+          techTag={techTag}
+          onClose={() => setSheet(null)}
+          onDone={() => { setSheet(null); qc.invalidateQueries({ queryKey: ["artisan-collection"] }); }}
+        />
+      )}
     </div>
   );
 }
