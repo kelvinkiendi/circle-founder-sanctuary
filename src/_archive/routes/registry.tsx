@@ -664,7 +664,7 @@ function BulkImport({ onDone }: { onDone: () => void }) {
                     <td className="p-2 font-mono">{r.phone}</td>
                     <td className="p-2">{r.client_type}</td>
                     <td className="p-2">
-                      {!r.__valid ? r.__errors.join(", ") : r.__duplicate ? "Duplicate phone — skip" : "Ready"}
+                      {!r.__valid ? r.__errors.join(", ") : r.__duplicate ? (dupMode === "update" ? "Duplicate — will update" : "Duplicate — skip") : "Ready"}
                     </td>
                   </tr>
                 ))}
@@ -673,13 +673,25 @@ function BulkImport({ onDone }: { onDone: () => void }) {
             {rows.length > 50 && <p className="text-center text-xs text-muted-foreground p-2">+{rows.length - 50} more rows</p>}
           </div>
 
+          {dups.length > 0 && (
+            <div className="mt-4 flex items-center gap-2 text-xs">
+              <span className="uppercase tracking-[0.2em] text-muted-foreground">Duplicates:</span>
+              {(["skip", "update"] as const).map((m) => (
+                <button key={m} onClick={() => setDupMode(m)}
+                  className={`px-3 py-1.5 rounded-md border uppercase tracking-[0.15em] ${dupMode === m ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>
+                  {m === "skip" ? "Skip existing" : "Update existing"}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 mt-4">
             <button onClick={() => { setRows([]); setFileName(""); }}
               className="text-xs uppercase tracking-[0.2em] px-4 py-2.5 border border-border rounded-md">Cancel</button>
-            <button onClick={runImport} disabled={importing || valid.length === 0}
+            <button onClick={runImport} disabled={importing || (valid.length === 0 && (dupMode !== "update" || dups.length === 0))}
               className="text-xs uppercase tracking-[0.2em] px-4 py-2.5 bg-primary text-primary-foreground rounded-md flex items-center gap-2 disabled:opacity-50">
               {importing && <Loader2 className="h-3 w-3 animate-spin" />}
-              Confirm Import ({valid.length})
+              Confirm Import ({valid.length}{dupMode === "update" && dups.length ? ` + update ${dups.length}` : ""})
             </button>
           </div>
         </div>
