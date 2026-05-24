@@ -27,6 +27,8 @@ type ClientRow = {
   first_visit_date: string | null;
   avatar_url: string | null;
   created_at: string;
+  last_appointment_date: string | null;
+  next_visit_predicted_date: string | null;
 };
 
 const REFERRAL_SOURCES = ["Instagram", "Referral", "Walk-in", "Google", "Friend", "Other"];
