@@ -286,18 +286,20 @@ function ApptCard({ appt, onRebook, onBill, compact }: { appt: any; onRebook: ()
 }
 
 // ============ Billing Sheet ============
-function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: string; onClose: () => void; onDone: () => void }) {
+function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; techTag: string; onClose: () => void; onDone: () => void }) {
   const stk = useServerFn(initiateMpesaStkPush);
   const cash = useServerFn(recordCashPayment);
   const addLines = useServerFn(addPaymentLineItems);
 
-  const [phone, setPhone] = useState<string>(appt.clients?.phone ?? "");
-  const [method, setMethod] = useState<"mpesa" | "cash">("mpesa");
+  const [client, setClient] = useState<any | null>(appt?.clients ? { id: appt.client_id, ...appt.clients } : null);
+  const [phone, setPhone] = useState<string>(appt?.clients?.phone ?? "");
+  const [method, setMethod] = useState<"mpesa" | "cash" | "card">("mpesa");
   const [busy, setBusy] = useState(false);
   type Row = { service_id: string | null; service_name: string; quantity: number; unit_price: number };
   const [rows, setRows] = useState<Row[]>([]);
   const [override, setOverride] = useState<number | null>(null);
   const [desc, setDesc] = useState<string>("");
+  const [clientQ, setClientQ] = useState("");
 
   const { data: services = [] } = useQuery({
     queryKey: ["bill-services"],
@@ -309,6 +311,17 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: 
     },
   });
 
+  const { data: searchClients = [] } = useQuery({
+    queryKey: ["bill-client-search", clientQ],
+    queryFn: async () => {
+      let qb = supabase.from("clients").select("id, full_name, phone, whatsapp_number, client_type").limit(10);
+      if (clientQ.trim()) qb = qb.or(`full_name.ilike.%${clientQ}%,phone.ilike.%${clientQ}%`);
+      const { data } = await qb;
+      return data ?? [];
+    },
+    enabled: !client,
+  });
+
   const computedTotal = rows.reduce((s, r) => s + r.unit_price * r.quantity, 0);
   const total = override ?? computedTotal;
   const autoDesc = rows.map((r) => `${r.service_name}${r.quantity > 1 ? ` ×${r.quantity}` : ""}`).join(", ");
@@ -318,27 +331,28 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: 
     if (!svc) return;
     setRows([...rows, { service_id: svc.id, service_name: svc.name, quantity: 1, unit_price: Number(svc.price_ksh) }]);
   };
-
   const removeRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
 
   const submit = async () => {
+    if (!client) { toast.error("Pick a client"); return; }
     if (rows.length === 0) { toast.error("Add at least one service"); return; }
     if (total <= 0) { toast.error("Total must be > 0"); return; }
     const description = (desc || autoDesc).slice(0, 200);
     setBusy(true);
     try {
-      if (method === "cash") {
+      if (method === "cash" || method === "card") {
         await cash({
           data: {
-            client_id: appt.client_id,
+            client_id: client.id,
             amount_ksh: total,
             description,
-            related_appointment_id: appt.id,
+            related_appointment_id: appt?.id ?? null,
             line_items: rows,
             created_by: techTag,
+            method,
           },
         });
-        toast.success("Cash payment recorded");
+        toast.success(method === "card" ? "Card payment recorded" : "Cash payment recorded");
         onDone();
         return;
       }
@@ -346,12 +360,12 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: 
       if (!ph) { toast.error("Invalid phone"); setBusy(false); return; }
       const res = await stk({
         data: {
-          client_id: appt.client_id,
+          client_id: client.id,
           payment_type: "other",
           amount_ksh: total,
           phone: ph,
           description,
-          related_appointment_id: appt.id,
+          related_appointment_id: appt?.id ?? null,
         },
       });
       try { await addLines({ data: { payment_id: res.payment_id, line_items: rows } }); } catch {}
@@ -366,80 +380,127 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: 
     <Sheet title="Bill Client" onClose={onClose}>
       <div className="space-y-4">
         {/* Step 1: Client */}
-        <div className="bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-[#8b6f47] mb-1">Client</div>
-          <div className="text-sm font-medium">{appt.clients?.full_name ?? "Guest"}</div>
-          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] mt-2 block">M-Pesa Phone</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel"
-            className="w-full mt-1 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm" />
-        </div>
+        {!client ? (
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-[#8b6f47] mb-1.5">Select Client</div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8b6f47]" />
+              <input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Search by name or phone…"
+                className="w-full pl-10 pr-3 py-2.5 border border-[#d4b896] rounded-lg bg-white text-sm" autoFocus />
+            </div>
+            <div className="mt-2 max-h-60 overflow-y-auto space-y-1">
+              {searchClients.map((c: any) => (
+                <button key={c.id} onClick={() => { setClient(c); setPhone(c.phone ?? ""); }}
+                  className="w-full text-left p-2.5 bg-white border border-[#d4b896]/40 rounded-lg active:bg-[#F5F5DC] flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{c.full_name}</div>
+                    <div className="text-[11px] text-[#8b6f47]">{c.phone ?? c.whatsapp_number}</div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[#8b6f47]" />
+                </button>
+              ))}
+              {searchClients.length === 0 && <div className="text-xs text-[#8b6f47] italic p-3 text-center">No clients found.</div>}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] uppercase tracking-wider text-[#8b6f47]">Client</div>
+              {!appt && (
+                <button onClick={() => { setClient(null); setPhone(""); }} className="ml-auto text-[10px] underline text-[#5D4037]">Change</button>
+              )}
+            </div>
+            <div className="text-sm font-medium">{client.full_name}</div>
+            {method === "mpesa" && (
+              <>
+                <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] mt-2 block">M-Pesa Phone</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel"
+                  className="w-full mt-1 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm" />
+              </>
+            )}
+          </div>
+        )}
 
-        {/* Step 2: Services */}
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-[#8b6f47] mb-1.5">Services</div>
-          <div className="space-y-2">
-            {rows.map((r, i) => (
-              <div key={i} className="flex items-center gap-2 bg-white border border-[#d4b896] rounded-lg p-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate">{r.service_name}</div>
-                  <div className="text-[10px] text-[#8b6f47]">KSH {r.unit_price.toLocaleString()} × {r.quantity}</div>
-                </div>
-                <input type="number" min={1} value={r.quantity}
-                  onChange={(e) => { const n = [...rows]; n[i].quantity = Math.max(1, Number(e.target.value)); setRows(n); }}
-                  className="w-14 px-2 py-1 border border-[#d4b896] rounded text-sm text-center" />
-                <input type="number" min={0} value={r.unit_price}
-                  onChange={(e) => { const n = [...rows]; n[i].unit_price = Number(e.target.value); setRows(n); }}
-                  className="w-20 px-2 py-1 border border-[#d4b896] rounded text-sm text-right" />
-                <button onClick={() => removeRow(i)} className="p-1 text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>
+        {client && (
+          <>
+            {/* Step 2: Services */}
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-[#8b6f47] mb-1.5">Services Performed</div>
+              <div className="space-y-2">
+                {rows.map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-white border border-[#d4b896] rounded-lg p-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm truncate">{r.service_name}</div>
+                      <div className="text-[10px] text-[#8b6f47]">KSH {r.unit_price.toLocaleString()} × {r.quantity}</div>
+                    </div>
+                    <input type="number" min={1} value={r.quantity}
+                      onChange={(e) => { const n = [...rows]; n[i].quantity = Math.max(1, Number(e.target.value)); setRows(n); }}
+                      className="w-14 px-2 py-1 border border-[#d4b896] rounded text-sm text-center" />
+                    <input type="number" min={0} value={r.unit_price}
+                      onChange={(e) => { const n = [...rows]; n[i].unit_price = Number(e.target.value); setRows(n); }}
+                      className="w-20 px-2 py-1 border border-[#d4b896] rounded text-sm text-right" />
+                    <button onClick={() => removeRow(i)} className="p-1 text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <select onChange={(e) => { if (e.target.value) { addRow(e.target.value); e.target.value = ""; } }}
-            className="w-full mt-2 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm">
-            <option value="">+ Add a service…</option>
-            {services.map((s: any) => (
-              <option key={s.id} value={s.id}>{s.name} — KSH {Number(s.price_ksh).toLocaleString()}</option>
-            ))}
-          </select>
-        </div>
+              <select onChange={(e) => { if (e.target.value) { addRow(e.target.value); e.target.value = ""; } }}
+                className="w-full mt-2 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm">
+                <option value="">+ Add a service…</option>
+                {services.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name} — KSH {Number(s.price_ksh).toLocaleString()}</option>
+                ))}
+              </select>
+            </div>
 
-        {/* Step 3: Amount + payment */}
-        <div className="bg-white border border-[#d4b896] rounded-lg p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">Computed total</span>
-            <span className="font-display text-lg">KSH {computedTotal.toLocaleString()}</span>
-          </div>
-          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Override amount (optional)</label>
-          <input type="number" value={override ?? ""} placeholder={String(computedTotal)}
-            onChange={(e) => setOverride(e.target.value === "" ? null : Number(e.target.value))}
-            className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
-          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Description</label>
-          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={autoDesc || "Service description"}
-            className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
-          <div className="flex gap-2 pt-1">
-            <button onClick={() => setMethod("mpesa")}
-              className={`flex-1 py-2 rounded text-xs border flex items-center justify-center gap-1 ${method === "mpesa" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
-              <Smartphone className="h-3.5 w-3.5" /> M-Pesa STK
-            </button>
-            <button onClick={() => setMethod("cash")}
-              className={`flex-1 py-2 rounded text-xs border flex items-center justify-center gap-1 ${method === "cash" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
-              <Banknote className="h-3.5 w-3.5" /> Cash
-            </button>
-          </div>
-        </div>
+            {/* Step 3: Amount + payment */}
+            <div className="bg-white border border-[#d4b896] rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">Computed total</span>
+                <span className="font-display text-lg">KSH {computedTotal.toLocaleString()}</span>
+              </div>
+              <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Override amount (optional)</label>
+              <input type="number" value={override ?? ""} placeholder={String(computedTotal)}
+                onChange={(e) => setOverride(e.target.value === "" ? null : Number(e.target.value))}
+                className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
+              <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Description</label>
+              <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={autoDesc || "Service description"}
+                className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <button onClick={() => setMethod("mpesa")}
+                  className={`py-2 rounded text-[11px] border flex items-center justify-center gap-1 ${method === "mpesa" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+                  <Smartphone className="h-3.5 w-3.5" /> M-Pesa
+                </button>
+                <button onClick={() => setMethod("cash")}
+                  className={`py-2 rounded text-[11px] border flex items-center justify-center gap-1 ${method === "cash" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+                  <Banknote className="h-3.5 w-3.5" /> Cash
+                </button>
+                <button onClick={() => setMethod("card")}
+                  className={`py-2 rounded text-[11px] border flex items-center justify-center gap-1 ${method === "card" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+                  <Wallet className="h-3.5 w-3.5" /> Card
+                </button>
+              </div>
+              {method === "card" && (
+                <p className="text-[10px] text-[#8b6f47] italic">Swipe on terminal, then tap Record to log the payment.</p>
+              )}
+            </div>
 
-        <div className="flex items-center justify-between bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
-          <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">To collect</span>
-          <span className="font-display text-2xl text-[#5D4037]">KSH {total.toLocaleString()}</span>
-        </div>
+            <div className="flex items-center justify-between bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
+              <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">To collect</span>
+              <span className="font-display text-2xl text-[#5D4037]">KSH {total.toLocaleString()}</span>
+            </div>
 
-        <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-[#5D4037]/30 rounded-lg text-sm">Cancel</button>
-          <button disabled={busy} onClick={submit}
-            className="flex-1 py-3 bg-[#5D4037] text-[#F5F5DC] rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
-            {busy ? "Processing…" : method === "mpesa" ? <><Smartphone className="h-4 w-4" /> Send STK Push</> : <><Banknote className="h-4 w-4" /> Record Cash</>}
-          </button>
-        </div>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 py-2.5 border border-[#5D4037]/30 rounded-lg text-sm">Cancel</button>
+              <button disabled={busy} onClick={submit}
+                className="flex-1 py-3 bg-[#5D4037] text-[#F5F5DC] rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                {busy ? "Processing…"
+                  : method === "mpesa" ? <><Smartphone className="h-4 w-4" /> Send STK Push</>
+                  : method === "card"  ? <><Wallet className="h-4 w-4" /> Record Card</>
+                  : <><Banknote className="h-4 w-4" /> Record Cash</>}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </Sheet>
   );
