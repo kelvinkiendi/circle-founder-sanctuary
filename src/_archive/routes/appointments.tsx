@@ -1015,19 +1015,38 @@ function AppointmentDetailDialog({
 
       // Side effects on perk records
       if (next === "no-show") {
-        // forfeit related perk
         await supabase
           .from("perks_usage")
           .update({ status: "forfeited" })
           .eq("related_appointment_id", appt.id);
       } else if (next === "cancelled") {
-        // restore perk if cancelled with notice (assume >=24hr)
         await supabase
           .from("perks_usage")
           .update({ status: "available", used_date: null, related_appointment_id: null })
           .eq("related_appointment_id", appt.id);
-      } else if (next === "completed") {
-        // keep perk as used
+      }
+
+      // WhatsApp on cancel (skip if client opted out)
+      if (next === "cancelled" && appt.client_id) {
+        const { data: c } = await supabase
+          .from("clients")
+          .select("full_name, whatsapp_opt_out")
+          .eq("id", appt.client_id)
+          .maybeSingle();
+        if (c && !c.whatsapp_opt_out) {
+          const firstName = c.full_name?.split(" ")[0] ?? "there";
+          const dateLabel = new Date(appt.scheduled_date).toLocaleDateString("en-GB", {
+            weekday: "long", day: "numeric", month: "long",
+          });
+          const body = `${firstName}, your ${meta?.label ?? "appointment"} on ${dateLabel} at ${appt.scheduled_time?.slice(0,5)} has been cancelled. Reply to rebook. — COTERIE`;
+          await supabase.from("whatsapp_messages").insert({
+            client_id: appt.client_id,
+            template_key: "appointment_cancellation",
+            body,
+            status: "sent",
+            created_by: "appointment_cancelled",
+          });
+        }
       }
     },
     onSuccess: (_d, next) => {
@@ -1035,8 +1054,8 @@ function AppointmentDetailDialog({
       qc.invalidateQueries({ queryKey: ["perks"] });
       const messages: Record<ApptStatus, string> = {
         completed: "Marked complete",
-        "no-show": "No-show recorded · perk forfeited · WhatsApp notification queued",
-        cancelled: "Cancelled · perk returned to available",
+        "no-show": "No-show recorded · perk forfeited",
+        cancelled: "Cancelled · perk returned · WhatsApp queued",
         booked: "Status updated",
         forfeited: "Forfeited",
       };
