@@ -52,7 +52,7 @@ export const validateWeeklyRefresh = createServerFn({ method: "POST" })
     if (available.length === 0)
       return { eligible: false, reason: "No Weekly Refresh perk allocated for this week.", next_available: weekEnd.toISOString(), reschedules_used: 0 };
 
-    // Count reschedules this week
+    // Count cancellations this week as proxy for reschedules
     const { count: reschedules } = await supabaseAdmin
       .from("appointments")
       .select("id", { count: "exact", head: true })
@@ -60,7 +60,7 @@ export const validateWeeklyRefresh = createServerFn({ method: "POST" })
       .eq("appointment_type", "weekly_refresh")
       .gte("scheduled_date", weekStart.toISOString().slice(0, 10))
       .lt("scheduled_date", weekEnd.toISOString().slice(0, 10))
-      .eq("status", "rescheduled");
+      .eq("status", "cancelled");
 
     return { eligible: true, reason: "OK", next_available: requested.toISOString(), reschedules_used: reschedules || 0 };
   });
