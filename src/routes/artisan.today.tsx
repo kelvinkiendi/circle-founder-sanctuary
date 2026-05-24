@@ -558,8 +558,9 @@ function NewBookingSheet({
 
   // Update duration on service select
   useEffect(() => {
-    if (service) setDuration(SERVICE_META[service].minutes);
-  }, [service]);
+    if (customService) setDuration(customService.duration_minutes);
+    else if (service) setDuration(SERVICE_META[service].minutes);
+  }, [service, customService]);
 
   return (
     <Sheet title="New Booking" onClose={onClose}>
@@ -575,6 +576,7 @@ function NewBookingSheet({
         <Step2Service
           client={client}
           service={service} setService={setService}
+          customService={customService} setCustomService={setCustomService}
           date={date} setDate={setDate}
           time={time} setTime={setTime}
           duration={duration} setDuration={setDuration}
@@ -601,7 +603,8 @@ function NewBookingSheet({
 
       {step === 4 && client && service && time && (
         <Step4Confirm
-          client={client} service={service} date={date} time={time}
+          client={client} service={service} customService={customService}
+          date={date} time={time}
           duration={duration} location={location} travelAddr={travelAddr}
           notes={notes} perkRedeem={perkRedeem} techTag={techTag}
           notifyClient={notifyClient} setNotifyClient={setNotifyClient}
