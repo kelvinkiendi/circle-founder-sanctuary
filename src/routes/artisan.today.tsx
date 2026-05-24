@@ -1004,12 +1004,14 @@ function PerkRow({ label, available, reason, selected, onToggle }: any) {
 
 // ============ Step 4: Confirm ============
 function Step4Confirm({
-  client, service, date, time, duration, location, travelAddr, notes, perkRedeem,
+  client, service, customService, date, time, duration, location, travelAddr, notes, perkRedeem,
   techTag, notifyClient, setNotifyClient, onBack, onDone,
 }: any) {
   const meta = SERVICE_META[service as ServiceType];
+  const label = customService?.name ?? meta.label;
+  const basePrice = customService ? customService.price_ksh : meta.priceKsh;
   const isFounder = client.client_type === "founder";
-  let price = meta.priceKsh;
+  let price = basePrice;
   if (perkRedeem === "weekly_refresh") price = 0;
   else if (isFounder) price = Math.round(price * 0.85);
   if (location === "travel" && !travelAddr.toLowerCase().includes("kilimani")) price += 500;
@@ -1026,6 +1028,8 @@ function Step4Confirm({
       const { data: appt, error } = await supabase.from("appointments").insert({
         client_id: client.id,
         appointment_type: service,
+        service_id: customService?.id ?? null,
+        service_description: customService?.name ?? null,
         scheduled_date: date,
         scheduled_time: time,
         duration_minutes: duration,
@@ -1033,7 +1037,7 @@ function Step4Confirm({
         notes: composedNotes,
         status: "booked",
         created_by: techTag,
-      }).select().single();
+      } as any).select().single();
       if (error) throw error;
 
       if (perkRedeem) {
