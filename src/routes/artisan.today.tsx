@@ -797,13 +797,21 @@ function Step2Service({
       <div>
         <label className="text-[11px] uppercase tracking-wider text-[#8b6f47]">Service</label>
         <div className="grid grid-cols-2 gap-2 mt-1.5">
-          {(Object.keys(SERVICE_META) as ServiceType[]).map((s) => (
-            <button key={s} onClick={() => setService(s)}
-              className={`p-2.5 rounded-lg border text-xs text-left ${service === s ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
-              <div className="font-medium">{SERVICE_META[s].label}</div>
-              <div className={`text-[10px] ${service === s ? "opacity-80" : "text-[#8b6f47]"}`}>{SERVICE_META[s].minutes}m · KSH {SERVICE_META[s].priceKsh}</div>
-            </button>
-          ))}
+          {catalog.map((svc: any) => {
+            const selected = customService?.id === svc.id;
+            return (
+              <button key={svc.id} onClick={() => { setCustomService({ id: svc.id, name: svc.name, price_ksh: Number(svc.price_ksh), duration_minutes: svc.duration_minutes }); setService(mapToEnum(svc)); }}
+                className={`p-2.5 rounded-lg border text-xs text-left ${selected ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+                <div className="font-medium">{svc.name}</div>
+                <div className={`text-[10px] ${selected ? "opacity-80" : "text-[#8b6f47]"}`}>{svc.duration_minutes}m · KSH {Number(svc.price_ksh).toLocaleString()}</div>
+              </button>
+            );
+          })}
+          {catalog.length === 0 && (
+            <div className="col-span-2 p-3 text-center text-[11px] text-[#8b6f47] italic border border-dashed border-[#d4b896] rounded-lg">
+              No services in catalog yet. Ask the manager to add some.
+            </div>
+          )}
         </div>
         <div className="mt-2 p-2 rounded bg-[#F5F5DC]/60 text-[10px] text-[#8b6f47] flex items-center gap-1">
           <Lock className="h-3 w-3" /> Surprise / Birthday Sanctuary awarded by COTERIE management only.
