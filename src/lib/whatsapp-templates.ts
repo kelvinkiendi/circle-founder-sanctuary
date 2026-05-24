@@ -162,6 +162,22 @@ export const WHATSAPP_TEMPLATES: TemplateMeta[] = [
     render: (x) =>
       `Reminder: ${v(x, "service")} with ${v(x, "client")} at ${v(x, "time")} (in 1 hour). — COTERIE`,
   },
+  {
+    key: "new_client_welcome",
+    label: "17 · New Client Welcome",
+    description: "Auto-sent on first registration.",
+    variables: ["name", "date", "time"],
+    render: (x) =>
+      `Welcome to COTERIE Nail Sanctuary, ${v(x, "name")}! You're now part of our circle. Your first visit is booked for ${v(x, "date")} at ${v(x, "time")}. We can't wait to pamper you. — COTERIE 💅`,
+  },
+  {
+    key: "service_followup_24h",
+    label: "18 · Service Follow-Up (24h)",
+    description: "Sent 24hrs after a service to check in.",
+    variables: ["name", "service"],
+    render: (x) =>
+      `Hi ${v(x, "name")}, how are your nails feeling after yesterday's ${v(x, "service")}? If you need a Gel Rescue within 7 days, just WhatsApp us. — COTERIE`,
+  },
 ];
 
 export function getTemplate(key: TemplateKey) {
