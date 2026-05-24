@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout, PageHeader } from "@/components/Layout";
+import { ServiceAreaMap } from "@/components/ServiceAreaMap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -175,22 +176,66 @@ function BusinessTab() {
             </div>
           </Field>
         </div>
-        <Field label="Logo URL">
-          <Input placeholder="https://… or upload via Cloud" value={b.logo_url || ""} onChange={(e) => setB({ ...b, logo_url: e.target.value })} />
+        <Field label="Logo">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                id="logo-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const ext = file.name.split(".").pop() || "png";
+                  const path = `logo-${Date.now()}.${ext}`;
+                  const { error: upErr } = await supabase.storage
+                    .from("brand-assets")
+                    .upload(path, file, { upsert: true, contentType: file.type });
+                  if (upErr) { toast.error(upErr.message); return; }
+                  const { data: pub } = supabase.storage.from("brand-assets").getPublicUrl(path);
+                  setB({ ...b, logo_url: pub.publicUrl });
+                  toast.success("Logo uploaded — click Save Brand to persist");
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById("logo-upload")?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />Upload Logo
+              </Button>
+              <Input
+                placeholder="…or paste image URL"
+                value={b.logo_url || ""}
+                onChange={(e) => setB({ ...b, logo_url: e.target.value })}
+              />
+            </div>
+            {b.logo_url && (
+              <img src={b.logo_url} alt="Logo" className="h-20 object-contain rounded border bg-muted p-2" />
+            )}
+          </div>
         </Field>
-        {b.logo_url && <img src={b.logo_url} alt="Logo" className="h-20 object-contain rounded border bg-muted p-2" />}
         <Button onClick={() => save.mutate(b)} variant="outline" className="w-full"><Save className="h-4 w-4 mr-2" />Save Brand</Button>
       </Section>
 
       <Section title="Operating Hours">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Mon–Fri Open"><Input type="time" value={h.weekday_open || ""} onChange={(e) => setH({ ...h, weekday_open: e.target.value })} /></Field>
-          <Field label="Mon–Fri Close"><Input type="time" value={h.weekday_close || ""} onChange={(e) => setH({ ...h, weekday_close: e.target.value })} /></Field>
-          <Field label="Sat Open"><Input type="time" value={h.sat_open || ""} onChange={(e) => setH({ ...h, sat_open: e.target.value })} /></Field>
-          <Field label="Sat Close"><Input type="time" value={h.sat_close || ""} onChange={(e) => setH({ ...h, sat_close: e.target.value })} /></Field>
-          <Field label="Sun Open"><Input type="time" value={h.sun_open || ""} onChange={(e) => setH({ ...h, sun_open: e.target.value })} /></Field>
-          <Field label="Sun Close"><Input type="time" value={h.sun_close || ""} onChange={(e) => setH({ ...h, sun_close: e.target.value })} /></Field>
-        </div>
+        {(["mon","tue","wed","thu","fri","sat","sun"] as const).map((day) => {
+          const closed = !!h[`${day}_closed`];
+          const label = { mon:"Mon", tue:"Tue", wed:"Wed", thu:"Thu", fri:"Fri", sat:"Sat", sun:"Sun" }[day];
+          return (
+            <div key={day} className="flex items-center gap-3 rounded-lg border p-2">
+              <div className="w-12 text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</div>
+              <Input type="time" disabled={closed} value={h[`${day}_open`] || ""} onChange={(e) => setH({ ...h, [`${day}_open`]: e.target.value })} className="flex-1" />
+              <span className="text-xs text-muted-foreground">to</span>
+              <Input type="time" disabled={closed} value={h[`${day}_close`] || ""} onChange={(e) => setH({ ...h, [`${day}_close`]: e.target.value })} className="flex-1" />
+              <div className="flex items-center gap-1.5">
+                <Switch checked={closed} onCheckedChange={(v) => setH({ ...h, [`${day}_closed`]: v })} />
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Closed</span>
+              </div>
+            </div>
+          );
+        })}
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <Label>After-hours emergency availability</Label>
@@ -231,9 +276,11 @@ function ServiceAreaEditor() {
       <Field label="Transport Charge (KSH)">
         <Input type="number" value={v.transport_charge ?? ""} onChange={(e) => setV({ ...v, transport_charge: Number(e.target.value) })} />
       </Field>
-      <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 p-6 text-center text-xs text-muted-foreground">
-        🗺 Map drawing placeholder — Google Maps zone polygon coming soon
-      </div>
+      <ServiceAreaMap
+        corePolygon={v.core_polygon || []}
+        extendedPolygon={v.extended_polygon || []}
+        onChange={({ core, extended }) => setV({ ...v, core_polygon: core, extended_polygon: extended })}
+      />
       <Button onClick={() => save.mutate(v)} className="w-full"><Save className="h-4 w-4 mr-2" />Save Service Area</Button>
     </>
   );
