@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { normalizeKePhone } from "@/lib/phone";
 import { initiateMpesaStkPush, recordCashPayment, addPaymentLineItems } from "@/lib/payments.functions";
+import { sendWhatsAppMessage } from "@/lib/whatsapp.functions";
+import { ArtisanEarnings } from "@/components/ArtisanEarnings";
 
 export const Route = createFileRoute("/artisan/today")({
   component: () => (
