@@ -395,7 +395,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
     await supabaseAdmin.from("whatsapp_messages").insert({
       client_id: data.client_id,
       template_key: "payment_confirmation",
-      body: `Thank you ${client?.full_name?.split(" ")[0] ?? "there"}. We've received ${data.amount_ksh} KSH (cash). Receipt: ${receiptNo}. — COTERIE`,
+      body: `Thank you ${client?.full_name?.split(" ")[0] ?? "there"}. We've received ${data.amount_ksh} KSH (${isCard ? "card" : "cash"}). Receipt: ${receiptNo}. — COTERIE`,
       status: "queued",
       created_by: data.created_by ?? "system",
     });
