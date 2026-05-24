@@ -587,31 +587,109 @@ export type Database = {
           active: boolean
           created_at: string
           email: string | null
+          failed_attempts: number
           full_name: string
           id: string
+          last_login_at: string | null
+          locked_until: string | null
+          must_change_pin: boolean
           phone: string | null
           pin: string | null
+          pin_hash: string | null
           role: Database["public"]["Enums"]["staff_role"]
+          status: string
         }
         Insert: {
           active?: boolean
           created_at?: string
           email?: string | null
+          failed_attempts?: number
           full_name: string
           id?: string
+          last_login_at?: string | null
+          locked_until?: string | null
+          must_change_pin?: boolean
           phone?: string | null
           pin?: string | null
+          pin_hash?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
+          status?: string
         }
         Update: {
           active?: boolean
           created_at?: string
           email?: string | null
+          failed_attempts?: number
           full_name?: string
           id?: string
+          last_login_at?: string | null
+          locked_until?: string | null
+          must_change_pin?: boolean
           phone?: string | null
           pin?: string | null
+          pin_hash?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
+          status?: string
+        }
+        Relationships: []
+      }
+      staff_login_log: {
+        Row: {
+          attempted_at: string
+          id: string
+          ip: string | null
+          reason: string | null
+          staff_id: string | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          id?: string
+          ip?: string | null
+          reason?: string | null
+          staff_id?: string | null
+          success: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          id?: string
+          ip?: string | null
+          reason?: string | null
+          staff_id?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      staff_sessions: {
+        Row: {
+          device_label: string | null
+          ended_at: string | null
+          id: string
+          last_active_at: string
+          portal: string | null
+          staff_id: string
+          started_at: string
+        }
+        Insert: {
+          device_label?: string | null
+          ended_at?: string | null
+          id?: string
+          last_active_at?: string
+          portal?: string | null
+          staff_id: string
+          started_at?: string
+        }
+        Update: {
+          device_label?: string | null
+          ended_at?: string | null
+          id?: string
+          last_active_at?: string
+          portal?: string | null
+          staff_id?: string
+          started_at?: string
         }
         Relationships: []
       }
@@ -737,7 +815,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_reset_pin: {
+        Args: { p_admin_session: string; p_new_pin: string; p_staff_id: string }
+        Returns: boolean
+      }
+      change_staff_pin: {
+        Args: { p_new_pin: string; p_session: string }
+        Returns: boolean
+      }
+      end_staff_session: { Args: { p_session: string }; Returns: undefined }
+      get_staff_session: {
+        Args: { p_session: string }
+        Returns: {
+          full_name: string
+          last_login_at: string
+          must_change_pin: boolean
+          role: Database["public"]["Enums"]["staff_role"]
+          session_id: string
+          staff_id: string
+        }[]
+      }
+      record_failed_pin: { Args: { p_pin: string }; Returns: undefined }
       suspend_overdue_founders: { Args: never; Returns: number }
+      verify_staff_pin: {
+        Args: { p_device?: string; p_pin: string; p_user_agent?: string }
+        Returns: {
+          full_name: string
+          last_login_at: string
+          must_change_pin: boolean
+          role: Database["public"]["Enums"]["staff_role"]
+          session_id: string
+          staff_id: string
+        }[]
+      }
     }
     Enums: {
       appointment_location: "studio" | "travel"
@@ -788,7 +898,7 @@ export type Database = {
         | "gloves"
         | "magnetic_clasp"
       product_launch: "prelaunch" | "public"
-      staff_role: "admin" | "manager" | "technician" | "reception"
+      staff_role: "admin" | "manager" | "technician" | "reception" | "guardian"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -969,7 +1079,7 @@ export const Constants = {
         "magnetic_clasp",
       ],
       product_launch: ["prelaunch", "public"],
-      staff_role: ["admin", "manager", "technician", "reception"],
+      staff_role: ["admin", "manager", "technician", "reception", "guardian"],
     },
   },
 } as const
