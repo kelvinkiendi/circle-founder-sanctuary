@@ -332,6 +332,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
     related_appointment_id?: string | null;
     line_items?: Array<{ service_id?: string | null; service_name: string; quantity: number; unit_price: number }>;
     created_by?: string;
+    method?: "cash" | "card";
   }) =>
     z.object({
       client_id: z.string().uuid(),
@@ -346,20 +347,22 @@ export const recordCashPayment = createServerFn({ method: "POST" })
         unit_price: z.number().nonnegative(),
       })).optional(),
       created_by: z.string().optional(),
+      method: z.enum(["cash", "card"]).optional(),
     }).parse(d),
   )
   .handler(async ({ data }) => {
     const receiptNo = genReceiptNumber();
+    const isCard = data.method === "card";
     const { data: payment, error } = await supabaseAdmin.from("payments").insert({
       client_id: data.client_id,
       founder_id: data.founder_id ?? null,
       payment_type: "other",
       amount_ksh: data.amount_ksh,
-      phone: "CASH",
+      phone: isCard ? "CARD" : "CASH",
       status: "paid",
       paid_at: new Date().toISOString(),
-      mpesa_receipt_number: `CASH-${receiptNo.slice(-4)}`,
-      description: data.description ?? "Cash payment",
+      mpesa_receipt_number: `${isCard ? "CARD" : "CASH"}-${receiptNo.slice(-4)}`,
+      description: data.description ?? (isCard ? "Card payment" : "Cash payment"),
       related_appointment_id: data.related_appointment_id ?? null,
       created_by: data.created_by ?? null,
     }).select().single();
@@ -392,7 +395,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
     await supabaseAdmin.from("whatsapp_messages").insert({
       client_id: data.client_id,
       template_key: "payment_confirmation",
-      body: `Thank you ${client?.full_name?.split(" ")[0] ?? "there"}. We've received ${data.amount_ksh} KSH (cash). Receipt: ${receiptNo}. — COTERIE`,
+      body: `Thank you ${client?.full_name?.split(" ")[0] ?? "there"}. We've received ${data.amount_ksh} KSH (${isCard ? "card" : "cash"}). Receipt: ${receiptNo}. — COTERIE`,
       status: "queued",
       created_by: data.created_by ?? "system",
     });

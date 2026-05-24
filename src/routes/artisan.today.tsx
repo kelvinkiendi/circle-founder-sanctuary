@@ -48,7 +48,7 @@ const BLOCKED_REASONS = ["Lunch Break", "Personal Appointment", "Sick Leave", "T
 // ============ Root ============
 function ArtisanScheduler() {
   const { session, logout } = useSession();
-  const [sheet, setSheet] = useState<"new" | "block" | null>(null);
+  const [sheet, setSheet] = useState<"new" | "block" | "walkin-bill" | null>(null);
   const [billingAppt, setBillingAppt] = useState<any | null>(null);
   const [rebookClientId, setRebookClientId] = useState<string | null>(null);
   const [rebookService, setRebookService] = useState<ServiceType | null>(null);
@@ -129,18 +129,24 @@ function ArtisanScheduler() {
       </main>
 
       {/* Floating actions */}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-30">
+      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-30 flex-wrap justify-center px-3">
         <button
           onClick={() => setSheet("block")}
-          className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037]/30 rounded-full px-4 py-3 text-sm font-medium shadow-lg active:scale-95 transition flex items-center gap-2"
+          className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037]/30 rounded-full px-3 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
         >
-          <Coffee className="h-4 w-4" /> Block Time
+          <Coffee className="h-3.5 w-3.5" /> Block
+        </button>
+        <button
+          onClick={() => setSheet("walkin-bill")}
+          className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037] rounded-full px-4 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
+        >
+          <Wallet className="h-4 w-4" /> Bill Client
         </button>
         <button
           onClick={() => { setRebookClientId(null); setRebookService(null); setSheet("new"); }}
-          className="bg-[#5D4037] text-[#F5F5DC] rounded-full px-5 py-3 text-sm font-medium shadow-lg active:scale-95 transition flex items-center gap-2"
+          className="bg-[#5D4037] text-[#F5F5DC] rounded-full px-4 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
         >
-          <Plus className="h-5 w-5" /> Add Booking
+          <Plus className="h-4 w-4" /> Booking
         </button>
       </div>
 
@@ -167,6 +173,14 @@ function ArtisanScheduler() {
           techTag={techTag}
           onClose={() => setBillingAppt(null)}
           onDone={() => { setBillingAppt(null); qc.invalidateQueries({ queryKey: ["artisan-collection"] }); }}
+        />
+      )}
+      {sheet === "walkin-bill" && (
+        <BillingSheet
+          appt={null}
+          techTag={techTag}
+          onClose={() => setSheet(null)}
+          onDone={() => { setSheet(null); qc.invalidateQueries({ queryKey: ["artisan-collection"] }); }}
         />
       )}
     </div>
@@ -272,18 +286,20 @@ function ApptCard({ appt, onRebook, onBill, compact }: { appt: any; onRebook: ()
 }
 
 // ============ Billing Sheet ============
-function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: string; onClose: () => void; onDone: () => void }) {
+function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; techTag: string; onClose: () => void; onDone: () => void }) {
   const stk = useServerFn(initiateMpesaStkPush);
   const cash = useServerFn(recordCashPayment);
   const addLines = useServerFn(addPaymentLineItems);
 
-  const [phone, setPhone] = useState<string>(appt.clients?.phone ?? "");
-  const [method, setMethod] = useState<"mpesa" | "cash">("mpesa");
+  const [client, setClient] = useState<any | null>(appt?.clients ? { id: appt.client_id, ...appt.clients } : null);
+  const [phone, setPhone] = useState<string>(appt?.clients?.phone ?? "");
+  const [method, setMethod] = useState<"mpesa" | "cash" | "card">("mpesa");
   const [busy, setBusy] = useState(false);
   type Row = { service_id: string | null; service_name: string; quantity: number; unit_price: number };
   const [rows, setRows] = useState<Row[]>([]);
   const [override, setOverride] = useState<number | null>(null);
   const [desc, setDesc] = useState<string>("");
+  const [clientQ, setClientQ] = useState("");
 
   const { data: services = [] } = useQuery({
     queryKey: ["bill-services"],
@@ -295,6 +311,17 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: 
     },
   });
 
+  const { data: searchClients = [] } = useQuery({
+    queryKey: ["bill-client-search", clientQ],
+    queryFn: async () => {
+      let qb = supabase.from("clients").select("id, full_name, phone, whatsapp_number, client_type").limit(10);
+      if (clientQ.trim()) qb = qb.or(`full_name.ilike.%${clientQ}%,phone.ilike.%${clientQ}%`);
+      const { data } = await qb;
+      return data ?? [];
+    },
+    enabled: !client,
+  });
+
   const computedTotal = rows.reduce((s, r) => s + r.unit_price * r.quantity, 0);
   const total = override ?? computedTotal;
   const autoDesc = rows.map((r) => `${r.service_name}${r.quantity > 1 ? ` ×${r.quantity}` : ""}`).join(", ");
@@ -304,27 +331,28 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: 
     if (!svc) return;
     setRows([...rows, { service_id: svc.id, service_name: svc.name, quantity: 1, unit_price: Number(svc.price_ksh) }]);
   };
-
   const removeRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
 
   const submit = async () => {
+    if (!client) { toast.error("Pick a client"); return; }
     if (rows.length === 0) { toast.error("Add at least one service"); return; }
     if (total <= 0) { toast.error("Total must be > 0"); return; }
     const description = (desc || autoDesc).slice(0, 200);
     setBusy(true);
     try {
-      if (method === "cash") {
+      if (method === "cash" || method === "card") {
         await cash({
           data: {
-            client_id: appt.client_id,
+            client_id: client.id,
             amount_ksh: total,
             description,
-            related_appointment_id: appt.id,
+            related_appointment_id: appt?.id ?? null,
             line_items: rows,
             created_by: techTag,
+            method,
           },
         });
-        toast.success("Cash payment recorded");
+        toast.success(method === "card" ? "Card payment recorded" : "Cash payment recorded");
         onDone();
         return;
       }
@@ -332,12 +360,12 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: 
       if (!ph) { toast.error("Invalid phone"); setBusy(false); return; }
       const res = await stk({
         data: {
-          client_id: appt.client_id,
+          client_id: client.id,
           payment_type: "other",
           amount_ksh: total,
           phone: ph,
           description,
-          related_appointment_id: appt.id,
+          related_appointment_id: appt?.id ?? null,
         },
       });
       try { await addLines({ data: { payment_id: res.payment_id, line_items: rows } }); } catch {}
@@ -352,80 +380,127 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any; techTag: 
     <Sheet title="Bill Client" onClose={onClose}>
       <div className="space-y-4">
         {/* Step 1: Client */}
-        <div className="bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-[#8b6f47] mb-1">Client</div>
-          <div className="text-sm font-medium">{appt.clients?.full_name ?? "Guest"}</div>
-          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] mt-2 block">M-Pesa Phone</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel"
-            className="w-full mt-1 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm" />
-        </div>
+        {!client ? (
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-[#8b6f47] mb-1.5">Select Client</div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8b6f47]" />
+              <input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Search by name or phone…"
+                className="w-full pl-10 pr-3 py-2.5 border border-[#d4b896] rounded-lg bg-white text-sm" autoFocus />
+            </div>
+            <div className="mt-2 max-h-60 overflow-y-auto space-y-1">
+              {searchClients.map((c: any) => (
+                <button key={c.id} onClick={() => { setClient(c); setPhone(c.phone ?? ""); }}
+                  className="w-full text-left p-2.5 bg-white border border-[#d4b896]/40 rounded-lg active:bg-[#F5F5DC] flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{c.full_name}</div>
+                    <div className="text-[11px] text-[#8b6f47]">{c.phone ?? c.whatsapp_number}</div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[#8b6f47]" />
+                </button>
+              ))}
+              {searchClients.length === 0 && <div className="text-xs text-[#8b6f47] italic p-3 text-center">No clients found.</div>}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] uppercase tracking-wider text-[#8b6f47]">Client</div>
+              {!appt && (
+                <button onClick={() => { setClient(null); setPhone(""); }} className="ml-auto text-[10px] underline text-[#5D4037]">Change</button>
+              )}
+            </div>
+            <div className="text-sm font-medium">{client.full_name}</div>
+            {method === "mpesa" && (
+              <>
+                <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] mt-2 block">M-Pesa Phone</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel"
+                  className="w-full mt-1 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm" />
+              </>
+            )}
+          </div>
+        )}
 
-        {/* Step 2: Services */}
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-[#8b6f47] mb-1.5">Services</div>
-          <div className="space-y-2">
-            {rows.map((r, i) => (
-              <div key={i} className="flex items-center gap-2 bg-white border border-[#d4b896] rounded-lg p-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate">{r.service_name}</div>
-                  <div className="text-[10px] text-[#8b6f47]">KSH {r.unit_price.toLocaleString()} × {r.quantity}</div>
-                </div>
-                <input type="number" min={1} value={r.quantity}
-                  onChange={(e) => { const n = [...rows]; n[i].quantity = Math.max(1, Number(e.target.value)); setRows(n); }}
-                  className="w-14 px-2 py-1 border border-[#d4b896] rounded text-sm text-center" />
-                <input type="number" min={0} value={r.unit_price}
-                  onChange={(e) => { const n = [...rows]; n[i].unit_price = Number(e.target.value); setRows(n); }}
-                  className="w-20 px-2 py-1 border border-[#d4b896] rounded text-sm text-right" />
-                <button onClick={() => removeRow(i)} className="p-1 text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>
+        {client && (
+          <>
+            {/* Step 2: Services */}
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-[#8b6f47] mb-1.5">Services Performed</div>
+              <div className="space-y-2">
+                {rows.map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-white border border-[#d4b896] rounded-lg p-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm truncate">{r.service_name}</div>
+                      <div className="text-[10px] text-[#8b6f47]">KSH {r.unit_price.toLocaleString()} × {r.quantity}</div>
+                    </div>
+                    <input type="number" min={1} value={r.quantity}
+                      onChange={(e) => { const n = [...rows]; n[i].quantity = Math.max(1, Number(e.target.value)); setRows(n); }}
+                      className="w-14 px-2 py-1 border border-[#d4b896] rounded text-sm text-center" />
+                    <input type="number" min={0} value={r.unit_price}
+                      onChange={(e) => { const n = [...rows]; n[i].unit_price = Number(e.target.value); setRows(n); }}
+                      className="w-20 px-2 py-1 border border-[#d4b896] rounded text-sm text-right" />
+                    <button onClick={() => removeRow(i)} className="p-1 text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <select onChange={(e) => { if (e.target.value) { addRow(e.target.value); e.target.value = ""; } }}
-            className="w-full mt-2 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm">
-            <option value="">+ Add a service…</option>
-            {services.map((s: any) => (
-              <option key={s.id} value={s.id}>{s.name} — KSH {Number(s.price_ksh).toLocaleString()}</option>
-            ))}
-          </select>
-        </div>
+              <select onChange={(e) => { if (e.target.value) { addRow(e.target.value); e.target.value = ""; } }}
+                className="w-full mt-2 px-3 py-2 border border-[#d4b896] rounded bg-white text-sm">
+                <option value="">+ Add a service…</option>
+                {services.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name} — KSH {Number(s.price_ksh).toLocaleString()}</option>
+                ))}
+              </select>
+            </div>
 
-        {/* Step 3: Amount + payment */}
-        <div className="bg-white border border-[#d4b896] rounded-lg p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">Computed total</span>
-            <span className="font-display text-lg">KSH {computedTotal.toLocaleString()}</span>
-          </div>
-          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Override amount (optional)</label>
-          <input type="number" value={override ?? ""} placeholder={String(computedTotal)}
-            onChange={(e) => setOverride(e.target.value === "" ? null : Number(e.target.value))}
-            className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
-          <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Description</label>
-          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={autoDesc || "Service description"}
-            className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
-          <div className="flex gap-2 pt-1">
-            <button onClick={() => setMethod("mpesa")}
-              className={`flex-1 py-2 rounded text-xs border flex items-center justify-center gap-1 ${method === "mpesa" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
-              <Smartphone className="h-3.5 w-3.5" /> M-Pesa STK
-            </button>
-            <button onClick={() => setMethod("cash")}
-              className={`flex-1 py-2 rounded text-xs border flex items-center justify-center gap-1 ${method === "cash" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
-              <Banknote className="h-3.5 w-3.5" /> Cash
-            </button>
-          </div>
-        </div>
+            {/* Step 3: Amount + payment */}
+            <div className="bg-white border border-[#d4b896] rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">Computed total</span>
+                <span className="font-display text-lg">KSH {computedTotal.toLocaleString()}</span>
+              </div>
+              <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Override amount (optional)</label>
+              <input type="number" value={override ?? ""} placeholder={String(computedTotal)}
+                onChange={(e) => setOverride(e.target.value === "" ? null : Number(e.target.value))}
+                className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
+              <label className="text-[10px] uppercase tracking-wider text-[#8b6f47] block">Description</label>
+              <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={autoDesc || "Service description"}
+                className="w-full px-3 py-2 border border-[#d4b896] rounded text-sm" />
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <button onClick={() => setMethod("mpesa")}
+                  className={`py-2 rounded text-[11px] border flex items-center justify-center gap-1 ${method === "mpesa" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+                  <Smartphone className="h-3.5 w-3.5" /> M-Pesa
+                </button>
+                <button onClick={() => setMethod("cash")}
+                  className={`py-2 rounded text-[11px] border flex items-center justify-center gap-1 ${method === "cash" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+                  <Banknote className="h-3.5 w-3.5" /> Cash
+                </button>
+                <button onClick={() => setMethod("card")}
+                  className={`py-2 rounded text-[11px] border flex items-center justify-center gap-1 ${method === "card" ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+                  <Wallet className="h-3.5 w-3.5" /> Card
+                </button>
+              </div>
+              {method === "card" && (
+                <p className="text-[10px] text-[#8b6f47] italic">Swipe on terminal, then tap Record to log the payment.</p>
+              )}
+            </div>
 
-        <div className="flex items-center justify-between bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
-          <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">To collect</span>
-          <span className="font-display text-2xl text-[#5D4037]">KSH {total.toLocaleString()}</span>
-        </div>
+            <div className="flex items-center justify-between bg-[#F5F5DC] border border-[#d4b896] rounded-lg p-3">
+              <span className="text-[11px] uppercase tracking-wider text-[#8b6f47]">To collect</span>
+              <span className="font-display text-2xl text-[#5D4037]">KSH {total.toLocaleString()}</span>
+            </div>
 
-        <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-[#5D4037]/30 rounded-lg text-sm">Cancel</button>
-          <button disabled={busy} onClick={submit}
-            className="flex-1 py-3 bg-[#5D4037] text-[#F5F5DC] rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
-            {busy ? "Processing…" : method === "mpesa" ? <><Smartphone className="h-4 w-4" /> Send STK Push</> : <><Banknote className="h-4 w-4" /> Record Cash</>}
-          </button>
-        </div>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 py-2.5 border border-[#5D4037]/30 rounded-lg text-sm">Cancel</button>
+              <button disabled={busy} onClick={submit}
+                className="flex-1 py-3 bg-[#5D4037] text-[#F5F5DC] rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                {busy ? "Processing…"
+                  : method === "mpesa" ? <><Smartphone className="h-4 w-4" /> Send STK Push</>
+                  : method === "card"  ? <><Wallet className="h-4 w-4" /> Record Card</>
+                  : <><Banknote className="h-4 w-4" /> Record Cash</>}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </Sheet>
   );
@@ -463,6 +538,7 @@ function NewBookingSheet({
   const [step, setStep] = useState(1);
   const [client, setClient] = useState<any | null>(null);
   const [service, setService] = useState<ServiceType | null>(prefillService);
+  const [customService, setCustomService] = useState<{ id: string; name: string; price_ksh: number; duration_minutes: number } | null>(null);
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState<string>("");
   const [duration, setDuration] = useState<number>(0);
@@ -482,8 +558,9 @@ function NewBookingSheet({
 
   // Update duration on service select
   useEffect(() => {
-    if (service) setDuration(SERVICE_META[service].minutes);
-  }, [service]);
+    if (customService) setDuration(customService.duration_minutes);
+    else if (service) setDuration(SERVICE_META[service].minutes);
+  }, [service, customService]);
 
   return (
     <Sheet title="New Booking" onClose={onClose}>
@@ -499,6 +576,7 @@ function NewBookingSheet({
         <Step2Service
           client={client}
           service={service} setService={setService}
+          customService={customService} setCustomService={setCustomService}
           date={date} setDate={setDate}
           time={time} setTime={setTime}
           duration={duration} setDuration={setDuration}
@@ -525,7 +603,8 @@ function NewBookingSheet({
 
       {step === 4 && client && service && time && (
         <Step4Confirm
-          client={client} service={service} date={date} time={time}
+          client={client} service={service} customService={customService}
+          date={date} time={time}
           duration={duration} location={location} travelAddr={travelAddr}
           notes={notes} perkRedeem={perkRedeem} techTag={techTag}
           notifyClient={notifyClient} setNotifyClient={setNotifyClient}
@@ -638,10 +717,35 @@ function Step1Client({ onPick }: { onPick: (c: any) => void }) {
 
 // ============ Step 2: Service & Time ============
 function Step2Service({
-  client, service, setService, date, setDate, time, setTime, duration, setDuration,
+  client, service, setService, customService, setCustomService,
+  date, setDate, time, setTime, duration, setDuration,
   location, setLocation, travelAddr, setTravelAddr, notes, setNotes, techTag, onBack, onNext,
 }: any) {
   const today = new Date().toISOString().slice(0, 10);
+
+  // Load active services from catalog (admin-managed)
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["booking-services-catalog"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("services")
+        .select("id, name, price_ksh, duration_minutes, category, status")
+        .eq("status", "active").order("display_order").order("name");
+      return data ?? [];
+    },
+  });
+
+  // Map a catalog service's category/name to the appointment_type enum
+  const mapToEnum = (svc: any): ServiceType => {
+    const n = String(svc.name).toLowerCase();
+    if (n.includes("weekly") || n.includes("refresh")) return "weekly_refresh";
+    if (n.includes("rescue")) return "gel_rescue";
+    if (n.includes("travel") || n.includes("touch")) return "travel_touchup";
+    if (n.includes("gel") && n.includes("pedi")) return "gel_pedicure";
+    if (n.includes("gel")) return "gel_manicure";
+    if (n.includes("pedi")) return "full_pedicure";
+    return "full_manicure";
+  };
+
 
   // Existing appts for this tech on this date — to block overlapping slots
   const { data: dayAppts } = useQuery({
@@ -693,13 +797,21 @@ function Step2Service({
       <div>
         <label className="text-[11px] uppercase tracking-wider text-[#8b6f47]">Service</label>
         <div className="grid grid-cols-2 gap-2 mt-1.5">
-          {(Object.keys(SERVICE_META) as ServiceType[]).map((s) => (
-            <button key={s} onClick={() => setService(s)}
-              className={`p-2.5 rounded-lg border text-xs text-left ${service === s ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
-              <div className="font-medium">{SERVICE_META[s].label}</div>
-              <div className={`text-[10px] ${service === s ? "opacity-80" : "text-[#8b6f47]"}`}>{SERVICE_META[s].minutes}m · KSH {SERVICE_META[s].priceKsh}</div>
-            </button>
-          ))}
+          {catalog.map((svc: any) => {
+            const selected = customService?.id === svc.id;
+            return (
+              <button key={svc.id} onClick={() => { setCustomService({ id: svc.id, name: svc.name, price_ksh: Number(svc.price_ksh), duration_minutes: svc.duration_minutes }); setService(mapToEnum(svc)); }}
+                className={`p-2.5 rounded-lg border text-xs text-left ${selected ? "bg-[#5D4037] text-[#F5F5DC] border-[#5D4037]" : "bg-white border-[#d4b896]"}`}>
+                <div className="font-medium">{svc.name}</div>
+                <div className={`text-[10px] ${selected ? "opacity-80" : "text-[#8b6f47]"}`}>{svc.duration_minutes}m · KSH {Number(svc.price_ksh).toLocaleString()}</div>
+              </button>
+            );
+          })}
+          {catalog.length === 0 && (
+            <div className="col-span-2 p-3 text-center text-[11px] text-[#8b6f47] italic border border-dashed border-[#d4b896] rounded-lg">
+              No services in catalog yet. Ask the manager to add some.
+            </div>
+          )}
         </div>
         <div className="mt-2 p-2 rounded bg-[#F5F5DC]/60 text-[10px] text-[#8b6f47] flex items-center gap-1">
           <Lock className="h-3 w-3" /> Surprise / Birthday Sanctuary awarded by COTERIE management only.
@@ -892,12 +1004,14 @@ function PerkRow({ label, available, reason, selected, onToggle }: any) {
 
 // ============ Step 4: Confirm ============
 function Step4Confirm({
-  client, service, date, time, duration, location, travelAddr, notes, perkRedeem,
+  client, service, customService, date, time, duration, location, travelAddr, notes, perkRedeem,
   techTag, notifyClient, setNotifyClient, onBack, onDone,
 }: any) {
   const meta = SERVICE_META[service as ServiceType];
+  const label = customService?.name ?? meta.label;
+  const basePrice = customService ? customService.price_ksh : meta.priceKsh;
   const isFounder = client.client_type === "founder";
-  let price = meta.priceKsh;
+  let price = basePrice;
   if (perkRedeem === "weekly_refresh") price = 0;
   else if (isFounder) price = Math.round(price * 0.85);
   if (location === "travel" && !travelAddr.toLowerCase().includes("kilimani")) price += 500;
@@ -914,6 +1028,8 @@ function Step4Confirm({
       const { data: appt, error } = await supabase.from("appointments").insert({
         client_id: client.id,
         appointment_type: service,
+        service_id: customService?.id ?? null,
+        service_description: customService?.name ?? null,
         scheduled_date: date,
         scheduled_time: time,
         duration_minutes: duration,
@@ -921,7 +1037,7 @@ function Step4Confirm({
         notes: composedNotes,
         status: "booked",
         created_by: techTag,
-      }).select().single();
+      } as any).select().single();
       if (error) throw error;
 
       if (perkRedeem) {
@@ -935,7 +1051,7 @@ function Step4Confirm({
         await supabase.from("whatsapp_messages").insert({
           client_id: client.id,
           template_key: "booking_confirmation",
-          body: `Hi ${client.full_name}, your ${meta.label} is confirmed for ${date} at ${time.slice(0, 5)} (${location === "travel" ? "travel" : "studio"}). — COTERIE`,
+          body: `Hi ${client.full_name}, your ${label} is confirmed for ${date} at ${time.slice(0, 5)} (${location === "travel" ? "travel" : "studio"}). — COTERIE`,
           status: "queued",
           created_by: techTag,
         });
@@ -956,7 +1072,7 @@ function Step4Confirm({
     <div className="space-y-3">
       <div className="bg-white border border-[#d4b896] rounded-lg p-4 space-y-2 text-sm">
         <Row icon={<User className="h-4 w-4" />} label="Client" value={client.full_name} />
-        <Row icon={<Sparkles className="h-4 w-4" />} label="Service" value={meta.label} />
+        <Row icon={<Sparkles className="h-4 w-4" />} label="Service" value={label} />
         <Row icon={<Calendar className="h-4 w-4" />} label="When" value={`${date} · ${time.slice(0, 5)}`} />
         <Row icon={<Clock className="h-4 w-4" />} label="Duration" value={`${duration} min`} />
         <Row icon={<MapPin className="h-4 w-4" />} label="Location" value={location === "travel" ? `Travel · ${travelAddr}` : "Studio"} />
