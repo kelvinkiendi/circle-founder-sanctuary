@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 export type PortalTab = {
   id: string;
@@ -6,9 +6,27 @@ export type PortalTab = {
   render: () => ReactNode;
 };
 
+function readTabFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  const p = new URLSearchParams(window.location.search);
+  return p.get("tab");
+}
+
 export function PortalTabs({ tabs, initial }: { tabs: PortalTab[]; initial?: string }) {
-  const [active, setActive] = useState(initial ?? tabs[0]?.id);
+  const fromUrl = readTabFromUrl();
+  const valid = (id: string | null) => (id && tabs.some((t) => t.id === id) ? id : null);
+  const [active, setActive] = useState(valid(fromUrl) ?? initial ?? tabs[0]?.id);
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("tab") !== active) {
+      url.searchParams.set("tab", active);
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [active]);
+
   return (
     <div>
       <div className="border-b border-border mb-6 -mx-6 md:-mx-10 px-6 md:px-10 overflow-x-auto">

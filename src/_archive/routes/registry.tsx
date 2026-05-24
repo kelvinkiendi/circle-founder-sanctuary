@@ -265,7 +265,7 @@ async function sendWelcome(c: ClientRow) {
 async function upgradeToFounder(c: ClientRow) {
   const ok = window.confirm(`Upgrade ${c.full_name} to Founder Circle? This opens enrollment.`);
   if (!ok) return;
-  window.location.href = `/founders?upgrade=${c.id}`;
+  window.location.href = `/concierge/desk?tab=founders&upgrade=${c.id}`;
 }
 
 /* ---------------- Quick Add / Edit ---------------- */
@@ -478,7 +478,8 @@ function BulkImport({ onDone }: { onDone: () => void }) {
   const [fileName, setFileName] = useState("");
   const [existing, setExisting] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ added: number; skipped: number; errors: number } | null>(null);
+  const [dupMode, setDupMode] = useState<"skip" | "update">("skip");
+  const [result, setResult] = useState<{ added: number; updated: number; skipped: number; errors: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
@@ -559,7 +560,7 @@ function BulkImport({ onDone }: { onDone: () => void }) {
   const runImport = async () => {
     setImporting(true);
     try {
-      const payload = valid.map((r) => ({
+      const toRow = (r: ParsedRow) => ({
         full_name: r.full_name,
         phone: r.phone,
         whatsapp_number: r.whatsapp ? normalizeKePhone(r.whatsapp) : r.phone,
@@ -569,20 +570,42 @@ function BulkImport({ onDone }: { onDone: () => void }) {
         client_type: (r.client_type === "founder" || r.client_type === "prospect" ? r.client_type : "regular") as "regular" | "prospect" | "founder",
         notes: r.notes || null,
         first_visit_date: r.first_visit_date || null,
-      }));
-      const { data, error } = await supabase.from("clients").insert(payload).select("id, client_type");
-      if (error) throw error;
+      });
+
+      // Insert net-new
+      const insertPayload = valid.map(toRow);
+      let inserted: any[] = [];
+      if (insertPayload.length) {
+        const { data, error } = await supabase.from("clients").insert(insertPayload).select("id, client_type");
+        if (error) throw error;
+        inserted = data ?? [];
+      }
+
+      // Optionally update duplicates by phone
+      let updatedCount = 0;
+      if (dupMode === "update" && dups.length) {
+        for (const r of dups) {
+          const patch = toRow(r);
+          const { error } = await supabase.from("clients").update(patch).eq("phone", r.phone);
+          if (!error) updatedCount += 1;
+        }
+      }
 
       // Add prospects to waitlist
-      const prospects = (data ?? []).filter((d: any) => d.client_type === "prospect");
+      const prospects = inserted.filter((d: any) => d.client_type === "prospect");
       if (prospects.length) {
         await supabase.from("founder_waitlist").insert(
           prospects.map((p: any) => ({ client_id: p.id, priority_score: 10 })),
         );
       }
 
-      setResult({ added: valid.length, skipped: dups.length, errors: errs.length });
-      toast.success(`Imported ${valid.length} clients.`);
+      setResult({
+        added: insertPayload.length,
+        updated: updatedCount,
+        skipped: dupMode === "skip" ? dups.length : 0,
+        errors: errs.length,
+      });
+      toast.success(`Imported ${insertPayload.length} new${updatedCount ? `, updated ${updatedCount}` : ""}.`);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -641,7 +664,7 @@ function BulkImport({ onDone }: { onDone: () => void }) {
                     <td className="p-2 font-mono">{r.phone}</td>
                     <td className="p-2">{r.client_type}</td>
                     <td className="p-2">
-                      {!r.__valid ? r.__errors.join(", ") : r.__duplicate ? "Duplicate phone — skip" : "Ready"}
+                      {!r.__valid ? r.__errors.join(", ") : r.__duplicate ? (dupMode === "update" ? "Duplicate — will update" : "Duplicate — skip") : "Ready"}
                     </td>
                   </tr>
                 ))}
@@ -650,13 +673,25 @@ function BulkImport({ onDone }: { onDone: () => void }) {
             {rows.length > 50 && <p className="text-center text-xs text-muted-foreground p-2">+{rows.length - 50} more rows</p>}
           </div>
 
+          {dups.length > 0 && (
+            <div className="mt-4 flex items-center gap-2 text-xs">
+              <span className="uppercase tracking-[0.2em] text-muted-foreground">Duplicates:</span>
+              {(["skip", "update"] as const).map((m) => (
+                <button key={m} onClick={() => setDupMode(m)}
+                  className={`px-3 py-1.5 rounded-md border uppercase tracking-[0.15em] ${dupMode === m ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>
+                  {m === "skip" ? "Skip existing" : "Update existing"}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 mt-4">
             <button onClick={() => { setRows([]); setFileName(""); }}
               className="text-xs uppercase tracking-[0.2em] px-4 py-2.5 border border-border rounded-md">Cancel</button>
-            <button onClick={runImport} disabled={importing || valid.length === 0}
+            <button onClick={runImport} disabled={importing || (valid.length === 0 && (dupMode !== "update" || dups.length === 0))}
               className="text-xs uppercase tracking-[0.2em] px-4 py-2.5 bg-primary text-primary-foreground rounded-md flex items-center gap-2 disabled:opacity-50">
               {importing && <Loader2 className="h-3 w-3 animate-spin" />}
-              Confirm Import ({valid.length})
+              Confirm Import ({valid.length}{dupMode === "update" && dups.length ? ` + update ${dups.length}` : ""})
             </button>
           </div>
         </div>
@@ -667,7 +702,7 @@ function BulkImport({ onDone }: { onDone: () => void }) {
           <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-3" />
           <h3 className="font-display text-xl">Import complete</h3>
           <p className="text-sm text-muted-foreground mt-2">
-            {result.added} added · {result.skipped} duplicates skipped · {result.errors} errors
+            {result.added} added · {result.updated} updated · {result.skipped} skipped · {result.errors} errors
           </p>
           <button onClick={onDone}
             className="mt-4 text-xs uppercase tracking-[0.2em] px-4 py-2.5 bg-primary text-primary-foreground rounded-md">
