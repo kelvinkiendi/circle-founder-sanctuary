@@ -50,6 +50,9 @@ function DeskShell() {
       { id: "payments", label: "Payments", render: () => <PaymentsPage /> },
       { id: "whatsapp", label: "WhatsApp", render: () => <WhatsAppHub /> },
       CAN.changeSettings(role)
+        ? { id: "services", label: "Services", render: () => <ServicesPage /> }
+        : null,
+      CAN.changeSettings(role)
         ? { id: "settings", label: "Settings", render: () => <SettingsPage /> }
         : null,
     ];
