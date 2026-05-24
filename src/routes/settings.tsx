@@ -276,9 +276,11 @@ function ServiceAreaEditor() {
       <Field label="Transport Charge (KSH)">
         <Input type="number" value={v.transport_charge ?? ""} onChange={(e) => setV({ ...v, transport_charge: Number(e.target.value) })} />
       </Field>
-      <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 p-6 text-center text-xs text-muted-foreground">
-        🗺 Map drawing placeholder — Google Maps zone polygon coming soon
-      </div>
+      <ServiceAreaMap
+        corePolygon={v.core_polygon || []}
+        extendedPolygon={v.extended_polygon || []}
+        onChange={({ core, extended }) => setV({ ...v, core_polygon: core, extended_polygon: extended })}
+      />
       <Button onClick={() => save.mutate(v)} className="w-full"><Save className="h-4 w-4 mr-2" />Save Service Area</Button>
     </>
   );
