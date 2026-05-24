@@ -778,6 +778,93 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_commission_settings: {
+        Row: {
+          commission_percentage: number
+          commission_type: string
+          created_at: string
+          effective_date: string
+          fixed_amount_ksh: number
+          id: string
+          is_active: boolean
+          notes: string | null
+          set_by: string | null
+          staff_id: string
+        }
+        Insert: {
+          commission_percentage?: number
+          commission_type?: string
+          created_at?: string
+          effective_date?: string
+          fixed_amount_ksh?: number
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          set_by?: string | null
+          staff_id: string
+        }
+        Update: {
+          commission_percentage?: number
+          commission_type?: string
+          created_at?: string
+          effective_date?: string
+          fixed_amount_ksh?: number
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          set_by?: string | null
+          staff_id?: string
+        }
+        Relationships: []
+      }
+      staff_earnings: {
+        Row: {
+          appointment_id: string | null
+          commission_earned_ksh: number
+          commission_percentage: number
+          created_at: string
+          earnings_date: string
+          fixed_bonus_ksh: number
+          id: string
+          payment_id: string | null
+          sale_amount_ksh: number
+          service_id: string | null
+          service_name: string | null
+          staff_id: string
+          total_commission_ksh: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          commission_earned_ksh?: number
+          commission_percentage?: number
+          created_at?: string
+          earnings_date?: string
+          fixed_bonus_ksh?: number
+          id?: string
+          payment_id?: string | null
+          sale_amount_ksh?: number
+          service_id?: string | null
+          service_name?: string | null
+          staff_id: string
+          total_commission_ksh?: number
+        }
+        Update: {
+          appointment_id?: string | null
+          commission_earned_ksh?: number
+          commission_percentage?: number
+          created_at?: string
+          earnings_date?: string
+          fixed_bonus_ksh?: number
+          id?: string
+          payment_id?: string | null
+          sale_amount_ksh?: number
+          service_id?: string | null
+          service_name?: string | null
+          staff_id?: string
+          total_commission_ksh?: number
+        }
+        Relationships: []
+      }
       staff_login_log: {
         Row: {
           attempted_at: string
@@ -918,36 +1005,45 @@ export type Database = {
       }
       whatsapp_messages: {
         Row: {
+          appointment_id: string | null
           body: string
           client_id: string
           created_by: string | null
           delivered_at: string | null
           error: string | null
           id: string
+          message_type: string | null
+          phone_number: string | null
           read_at: string | null
           sent_at: string
           status: string
           template_key: string
         }
         Insert: {
+          appointment_id?: string | null
           body: string
           client_id: string
           created_by?: string | null
           delivered_at?: string | null
           error?: string | null
           id?: string
+          message_type?: string | null
+          phone_number?: string | null
           read_at?: string | null
           sent_at?: string
           status?: string
           template_key: string
         }
         Update: {
+          appointment_id?: string | null
           body?: string
           client_id?: string
           created_by?: string | null
           delivered_at?: string | null
           error?: string | null
           id?: string
+          message_type?: string | null
+          phone_number?: string | null
           read_at?: string | null
           sent_at?: string
           status?: string
@@ -981,6 +1077,14 @@ export type Database = {
         }[]
       }
       record_failed_pin: { Args: { p_pin: string }; Returns: undefined }
+      record_staff_earnings_for_payment: {
+        Args: { p_payment_id: string }
+        Returns: number
+      }
+      set_staff_pin: {
+        Args: { p_pin: string; p_staff_id: string }
+        Returns: boolean
+      }
       suspend_overdue_founders: { Args: never; Returns: number }
       verify_staff_pin: {
         Args: { p_device?: string; p_pin: string; p_user_agent?: string }
