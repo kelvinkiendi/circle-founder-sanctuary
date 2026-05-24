@@ -301,13 +301,13 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
                         <TableCell><Badge variant={statusVariant(r.status) as any}>{r.status}</Badge></TableCell>
                         <TableCell className="text-xs">{r.mpesa_receipt_number ?? "—"}</TableCell>
                         <TableCell className="flex gap-1 justify-end">
-                          {r.status === "pending" && (
+                          {!readOnly && r.status === "pending" && (
                             <>
                               <Button size="sm" variant="ghost" onClick={() => markPaid(r.id)}><CheckCircle2 className="h-4 w-4" /></Button>
                               <Button size="sm" variant="ghost" onClick={() => markFailed(r.id)}><XCircle className="h-4 w-4" /></Button>
                             </>
                           )}
-                          {(r.status === "failed" || r.status === "cancelled") && (
+                          {!readOnly && (r.status === "failed" || r.status === "cancelled") && (
                             <Button size="sm" variant="ghost" onClick={() => retryOne(r.id)}><RefreshCw className="h-4 w-4" /></Button>
                           )}
                           {r.status === "paid" && <FileText className="h-4 w-4 text-muted-foreground" />}
