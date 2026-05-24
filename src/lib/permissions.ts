@@ -33,15 +33,15 @@ export const ONBOARDING_TIP: Record<StaffRole, string> = {
 };
 
 export type NavKey =
-  | "dashboard" | "clients" | "founders" | "appointments" | "perks"
+  | "dashboard" | "clients" | "registry" | "founders" | "appointments" | "perks"
   | "surprises" | "products" | "brunch" | "payments" | "tech"
   | "whatsapp" | "settings" | "reports" | "checkin" | "exports";
 
 export const NAV_BY_ROLE: Record<StaffRole, NavKey[]> = {
-  admin: ["dashboard","clients","founders","appointments","perks","surprises","products","brunch","payments","tech","whatsapp","settings"],
-  manager: ["dashboard","clients","founders","appointments","perks","surprises","products","brunch","payments","whatsapp"],
+  admin: ["dashboard","registry","clients","founders","appointments","perks","surprises","products","brunch","payments","tech","whatsapp","settings"],
+  manager: ["dashboard","registry","clients","founders","appointments","perks","surprises","products","brunch","payments","whatsapp"],
   technician: ["tech"],
-  reception: ["clients","appointments","payments","whatsapp"],
+  reception: ["registry","clients","appointments","payments","whatsapp"],
   guardian: ["dashboard","payments","appointments","founders","products"],
 };
 

@@ -13,6 +13,7 @@ import { Route as WhatsappRouteImport } from './routes/whatsapp'
 import { Route as TechRouteImport } from './routes/tech'
 import { Route as SurprisesRouteImport } from './routes/surprises'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RegistryRouteImport } from './routes/registry'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PerksRouteImport } from './routes/perks'
 import { Route as PaymentsRouteImport } from './routes/payments'
@@ -48,6 +49,11 @@ const SurprisesRoute = SurprisesRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistryRoute = RegistryRouteImport.update({
+  id: '/registry',
+  path: '/registry',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsRoute = ProductsRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
+  '/registry': typeof RegistryRoute
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
   '/tech': typeof TechRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
+  '/registry': typeof RegistryRoute
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
   '/tech': typeof TechRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/payments': typeof PaymentsRoute
   '/perks': typeof PerksRoute
   '/products': typeof ProductsRoute
+  '/registry': typeof RegistryRoute
   '/settings': typeof SettingsRoute
   '/surprises': typeof SurprisesRoute
   '/tech': typeof TechRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/perks'
     | '/products'
+    | '/registry'
     | '/settings'
     | '/surprises'
     | '/tech'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/perks'
     | '/products'
+    | '/registry'
     | '/settings'
     | '/surprises'
     | '/tech'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/perks'
     | '/products'
+    | '/registry'
     | '/settings'
     | '/surprises'
     | '/tech'
@@ -279,6 +291,7 @@ export interface RootRouteChildren {
   PaymentsRoute: typeof PaymentsRoute
   PerksRoute: typeof PerksRoute
   ProductsRoute: typeof ProductsRoute
+  RegistryRoute: typeof RegistryRoute
   SettingsRoute: typeof SettingsRoute
   SurprisesRoute: typeof SurprisesRoute
   TechRoute: typeof TechRoute
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registry': {
+      id: '/registry'
+      path: '/registry'
+      fullPath: '/registry'
+      preLoaderRoute: typeof RegistryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products': {
@@ -447,6 +467,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentsRoute: PaymentsRoute,
   PerksRoute: PerksRoute,
   ProductsRoute: ProductsRoute,
+  RegistryRoute: RegistryRoute,
   SettingsRoute: SettingsRoute,
   SurprisesRoute: SurprisesRoute,
   TechRoute: TechRoute,

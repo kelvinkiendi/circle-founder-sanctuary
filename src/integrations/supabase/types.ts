@@ -163,14 +163,18 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          avatar_url: string | null
           birthday: string | null
           client_type: Database["public"]["Enums"]["client_type"]
           created_at: string
           email: string | null
+          first_visit_date: string | null
           full_name: string
           id: string
           notes: string | null
           phone: string | null
+          referral_source: string | null
+          referrer_id: string | null
           service_area: string | null
           status: Database["public"]["Enums"]["client_status"]
           whatsapp_number: string | null
@@ -178,14 +182,18 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
           birthday?: string | null
           client_type?: Database["public"]["Enums"]["client_type"]
           created_at?: string
           email?: string | null
+          first_visit_date?: string | null
           full_name: string
           id?: string
           notes?: string | null
           phone?: string | null
+          referral_source?: string | null
+          referrer_id?: string | null
           service_area?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           whatsapp_number?: string | null
@@ -193,20 +201,32 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
           birthday?: string | null
           client_type?: Database["public"]["Enums"]["client_type"]
           created_at?: string
           email?: string | null
+          first_visit_date?: string | null
           full_name?: string
           id?: string
           notes?: string | null
           phone?: string | null
+          referral_source?: string | null
+          referrer_id?: string | null
           service_area?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           whatsapp_number?: string | null
           whatsapp_opt_out?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       founder_brunch_events: {
         Row: {
@@ -338,6 +358,41 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      founder_waitlist: {
+        Row: {
+          added_by: string | null
+          client_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          priority_score: number
+        }
+        Insert: {
+          added_by?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          priority_score?: number
+        }
+        Update: {
+          added_by?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          priority_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "founder_waitlist_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -870,7 +925,7 @@ export type Database = {
       brunch_attendance_status: "confirmed" | "attended" | "no_show"
       brunch_event_status: "upcoming" | "completed" | "cancelled"
       client_status: "active" | "inactive"
-      client_type: "regular" | "founder"
+      client_type: "regular" | "founder" | "prospect"
       founder_status: "active" | "expired" | "pending"
       payment_method: "full" | "installment"
       payment_status: "pending" | "paid" | "failed" | "cancelled"
@@ -1048,7 +1103,7 @@ export const Constants = {
       brunch_attendance_status: ["confirmed", "attended", "no_show"],
       brunch_event_status: ["upcoming", "completed", "cancelled"],
       client_status: ["active", "inactive"],
-      client_type: ["regular", "founder"],
+      client_type: ["regular", "founder", "prospect"],
       founder_status: ["active", "expired", "pending"],
       payment_method: ["full", "installment"],
       payment_status: ["pending", "paid", "failed", "cancelled"],

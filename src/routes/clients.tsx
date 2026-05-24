@@ -1,7 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
 export const Route = createFileRoute("/clients")({
-  component: () => (
-    <PlaceholderPage eyebrow="The Sanctuary · Clients" title="All Clients" description="Every soul who has crossed the threshold of COTERIE." />
-  ),
+  beforeLoad: () => { throw redirect({ to: "/registry" }); },
 });
