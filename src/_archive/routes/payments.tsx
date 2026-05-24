@@ -194,12 +194,14 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
           <CardContent className="text-2xl font-display">{summary?.pending_count ?? 0} / {summary?.failed_count ?? 0}</CardContent></Card>
       </div>
 
-      <Tabs defaultValue="request" className="mt-6">
+      <Tabs defaultValue={readOnly ? "recent" : "request"} className="mt-6">
         <TabsList>
-          <TabsTrigger value="request">Request Payment</TabsTrigger>
+          {!readOnly && <TabsTrigger value="request">Request Payment</TabsTrigger>}
           <TabsTrigger value="recent">Recent Transactions</TabsTrigger>
           <TabsTrigger value="outstanding">Outstanding Installments</TabsTrigger>
         </TabsList>
+
+        {!readOnly && (
 
         <TabsContent value="request">
           <Card>
