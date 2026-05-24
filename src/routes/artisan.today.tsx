@@ -92,6 +92,10 @@ function ArtisanScheduler() {
         {/* Today's Collection */}
         <CollectionSummary techTag={techTag} today={today} />
 
+        {/* My Earnings */}
+        {session?.staffId && <ArtisanEarnings staffId={session.staffId} />}
+
+
         {/* Today */}
         <section>
           <div className="flex items-center justify-between mb-3">
