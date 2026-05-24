@@ -28,7 +28,7 @@ function GuardianShell() {
       ),
     },
     { id: "perks", label: "Perks Analytics", render: () => <PerksAnalyticsPage /> },
-    { id: "payments", label: "Financial Audit", render: () => <PaymentsPage /> },
+    { id: "payments", label: "Financial Audit", render: () => <PaymentsPage readOnly /> },
   ];
 
   return (

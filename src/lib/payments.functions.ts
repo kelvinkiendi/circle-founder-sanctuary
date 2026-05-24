@@ -21,12 +21,73 @@ const PaymentTypeEnum = z.enum([
 
 function genReceiptNumber() {
   const d = new Date();
-  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  return `CTR-${stamp}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const tail = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `COT-${stamp}-${tail}`;
 }
 
 function genCheckoutId() {
   return `ws_CO_${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
+
+function normalizeMsisdn(p: string) {
+  const digits = p.replace(/\D/g, "");
+  if (digits.startsWith("254")) return digits;
+  if (digits.startsWith("0")) return "254" + digits.slice(1);
+  if (digits.startsWith("7") || digits.startsWith("1")) return "254" + digits;
+  return digits;
+}
+
+// Live Safaricom Daraja STK Push. Returns null if creds missing (caller falls back to simulation).
+async function darajaStkPush(args: {
+  amount: number;
+  phone: string;
+  accountRef: string;
+  description: string;
+  callbackUrl: string;
+}): Promise<string | null> {
+  const key = process.env.MPESA_CONSUMER_KEY;
+  const secret = process.env.MPESA_CONSUMER_SECRET;
+  const shortcode = process.env.MPESA_SHORTCODE;
+  const passkey = process.env.MPESA_PASSKEY;
+  const env = (process.env.MPESA_ENV ?? "sandbox").toLowerCase();
+  if (!key || !secret || !shortcode || !passkey) return null;
+
+  const base = env === "live" ? "https://api.safaricom.co.ke" : "https://sandbox.safaricom.co.ke";
+
+  const auth = Buffer.from(`${key}:${secret}`).toString("base64");
+  const tokRes = await fetch(`${base}/oauth/v1/generate?grant_type=client_credentials`, {
+    headers: { Authorization: `Basic ${auth}` },
+  });
+  if (!tokRes.ok) throw new Error(`Daraja auth failed: ${tokRes.status}`);
+  const { access_token } = await tokRes.json();
+
+  const now = new Date();
+  const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+  const password = Buffer.from(`${shortcode}${passkey}${ts}`).toString("base64");
+
+  const res = await fetch(`${base}/mpesa/stkpush/v1/processrequest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${access_token}` },
+    body: JSON.stringify({
+      BusinessShortCode: shortcode,
+      Password: password,
+      Timestamp: ts,
+      TransactionType: "CustomerPayBillOnline",
+      Amount: Math.round(args.amount),
+      PartyA: args.phone,
+      PartyB: shortcode,
+      PhoneNumber: args.phone,
+      CallBackURL: args.callbackUrl,
+      AccountReference: args.accountRef.slice(0, 12),
+      TransactionDesc: args.description.slice(0, 13),
+    }),
+  });
+  const body = await res.json();
+  if (!res.ok || body?.ResponseCode !== "0") {
+    throw new Error(body?.errorMessage ?? body?.ResponseDescription ?? "STK push rejected");
+  }
+  return body.CheckoutRequestID as string;
 }
 
 // Compute amount for a payment type given context
@@ -83,7 +144,25 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    const checkoutId = genCheckoutId();
+    const phone = normalizeMsisdn(data.phone);
+    let checkoutId = genCheckoutId();
+    let live = false;
+    try {
+      const cbUrl = process.env.MPESA_CALLBACK_URL
+        ?? `${process.env.PUBLIC_BASE_URL ?? ""}/api/public/mpesa/callback`;
+      const real = await darajaStkPush({
+        amount: data.amount_ksh,
+        phone,
+        accountRef: data.founder_id ? `F${data.founder_id.slice(0, 8)}` : `C${data.client_id.slice(0, 8)}`,
+        description: data.description ?? "COTERIE",
+        callbackUrl: cbUrl,
+      });
+      if (real) { checkoutId = real; live = true; }
+    } catch (e: any) {
+      // Surface upstream error but still record an attempt
+      console.error("Daraja STK push error:", e?.message);
+    }
+
     const { data: row, error } = await supabaseAdmin
       .from("payments")
       .insert({
@@ -91,7 +170,7 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
         founder_id: data.founder_id ?? null,
         payment_type: data.payment_type,
         amount_ksh: data.amount_ksh,
-        phone: data.phone,
+        phone,
         status: "pending",
         mpesa_checkout_request_id: checkoutId,
         description: data.description ?? null,
@@ -103,13 +182,14 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // In production: call Safaricom Daraja STK Push here using process.env.MPESA_*
-    // For now we return the pending payment; the M-Pesa callback /api/public/mpesa/callback updates it.
     return {
       payment_id: row.id,
       checkout_request_id: checkoutId,
       status: "pending" as const,
-      prompt: `STK Push sent to ${data.phone}. Awaiting confirmation.`,
+      live,
+      prompt: live
+        ? `STK Push sent to ${phone}. Confirm on phone.`
+        : `Simulated push to ${phone} (Daraja creds not configured).`,
     };
   });
 

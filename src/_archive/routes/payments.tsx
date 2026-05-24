@@ -55,7 +55,7 @@ function statusVariant(s: string) {
   return "secondary";
 }
 
-export function PaymentsPage() {
+export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) {
   const fetchSummary = useServerFn(getPaymentSummary);
   const fetchOutstanding = useServerFn(getOutstandingInstallments);
   const computeAmt = useServerFn(computePaymentAmount);
@@ -194,12 +194,14 @@ export function PaymentsPage() {
           <CardContent className="text-2xl font-display">{summary?.pending_count ?? 0} / {summary?.failed_count ?? 0}</CardContent></Card>
       </div>
 
-      <Tabs defaultValue="request" className="mt-6">
+      <Tabs defaultValue={readOnly ? "recent" : "request"} className="mt-6">
         <TabsList>
-          <TabsTrigger value="request">Request Payment</TabsTrigger>
+          {!readOnly && <TabsTrigger value="request">Request Payment</TabsTrigger>}
           <TabsTrigger value="recent">Recent Transactions</TabsTrigger>
           <TabsTrigger value="outstanding">Outstanding Installments</TabsTrigger>
         </TabsList>
+
+        {!readOnly && (
 
         <TabsContent value="request">
           <Card>
@@ -270,6 +272,7 @@ export function PaymentsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         <TabsContent value="recent">
           <Card>
@@ -298,13 +301,13 @@ export function PaymentsPage() {
                         <TableCell><Badge variant={statusVariant(r.status) as any}>{r.status}</Badge></TableCell>
                         <TableCell className="text-xs">{r.mpesa_receipt_number ?? "—"}</TableCell>
                         <TableCell className="flex gap-1 justify-end">
-                          {r.status === "pending" && (
+                          {!readOnly && r.status === "pending" && (
                             <>
                               <Button size="sm" variant="ghost" onClick={() => markPaid(r.id)}><CheckCircle2 className="h-4 w-4" /></Button>
                               <Button size="sm" variant="ghost" onClick={() => markFailed(r.id)}><XCircle className="h-4 w-4" /></Button>
                             </>
                           )}
-                          {(r.status === "failed" || r.status === "cancelled") && (
+                          {!readOnly && (r.status === "failed" || r.status === "cancelled") && (
                             <Button size="sm" variant="ghost" onClick={() => retryOne(r.id)}><RefreshCw className="h-4 w-4" /></Button>
                           )}
                           {r.status === "paid" && <FileText className="h-4 w-4 text-muted-foreground" />}
@@ -323,9 +326,11 @@ export function PaymentsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Outstanding Installments</CardTitle>
-              <Button size="sm" variant="outline" onClick={async () => {
-                const r = await sweep(); toast.success(`Suspension sweep complete — ${r.suspended} updated`); loadAll();
-              }}>Run 45-day suspension sweep</Button>
+              {!readOnly && (
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const r = await sweep(); toast.success(`Suspension sweep complete — ${r.suspended} updated`); loadAll();
+                }}>Run 45-day suspension sweep</Button>
+              )}
             </CardHeader>
             <CardContent>
               <Table>
