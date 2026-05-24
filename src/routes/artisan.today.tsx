@@ -538,6 +538,7 @@ function NewBookingSheet({
   const [step, setStep] = useState(1);
   const [client, setClient] = useState<any | null>(null);
   const [service, setService] = useState<ServiceType | null>(prefillService);
+  const [customService, setCustomService] = useState<{ id: string; name: string; price_ksh: number; duration_minutes: number } | null>(null);
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState<string>("");
   const [duration, setDuration] = useState<number>(0);
