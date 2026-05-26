@@ -739,7 +739,6 @@ export type Database = {
           locked_until: string | null
           must_change_pin: boolean
           phone: string | null
-          pin: string | null
           pin_hash: string | null
           role: Database["public"]["Enums"]["staff_role"]
           status: string
@@ -755,7 +754,6 @@ export type Database = {
           locked_until?: string | null
           must_change_pin?: boolean
           phone?: string | null
-          pin?: string | null
           pin_hash?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           status?: string
@@ -771,7 +769,6 @@ export type Database = {
           locked_until?: string | null
           must_change_pin?: boolean
           phone?: string | null
-          pin?: string | null
           pin_hash?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           status?: string
