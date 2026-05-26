@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { TrendingUp, Calendar as CalIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { getCommissionRateFn, getEarningsRangeFn } from "@/lib/portal.functions";
+import { useSession } from "@/lib/session";
 
 type Range = "today" | "week" | "month";
 
@@ -20,41 +22,23 @@ function rangeDates(r: Range): { from: string; to: string; label: string } {
 }
 
 export function ArtisanEarnings({ staffId }: { staffId: string }) {
+  const { session } = useSession();
+  const fetchRate = useServerFn(getCommissionRateFn);
+  const fetchEarnings = useServerFn(getEarningsRangeFn);
   const [range, setRange] = useState<Range>("today");
   const [expanded, setExpanded] = useState(false);
   const r = rangeDates(range);
 
   const { data: rate } = useQuery({
-    queryKey: ["commission-rate", staffId],
-    enabled: !!staffId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("staff_commission_settings")
-        .select("commission_percentage, commission_type, fixed_amount_ksh")
-        .eq("staff_id", staffId)
-        .eq("is_active", true)
-        .lte("effective_date", new Date().toISOString().slice(0, 10))
-        .order("effective_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data ?? { commission_percentage: 0, commission_type: "percentage_of_sale", fixed_amount_ksh: 0 };
-    },
+    queryKey: ["commission-rate", staffId, session?.sessionId],
+    enabled: !!staffId && !!session?.sessionId,
+    queryFn: () => fetchRate({ data: { sessionId: session!.sessionId, staffId } }),
   });
 
   const { data: rows = [] } = useQuery({
-    queryKey: ["earnings", staffId, r.from, r.to],
-    enabled: !!staffId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("staff_earnings")
-        .select("id, earnings_date, service_name, sale_amount_ksh, commission_percentage, total_commission_ksh")
-        .eq("staff_id", staffId)
-        .gte("earnings_date", r.from)
-        .lte("earnings_date", r.to)
-        .order("earnings_date", { ascending: false })
-        .order("created_at", { ascending: false });
-      return data ?? [];
-    },
+    queryKey: ["earnings", staffId, r.from, r.to, session?.sessionId],
+    enabled: !!staffId && !!session?.sessionId,
+    queryFn: () => fetchEarnings({ data: { sessionId: session!.sessionId, staffId, from: r.from, to: r.to } }),
     refetchInterval: 60_000,
   });
 

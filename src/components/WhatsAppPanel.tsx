@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Send, Check, CheckCheck, Eye, Loader2, MessageSquare } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { WHATSAPP_TEMPLATES, getTemplate, autoFillForFounder, type TemplateKey } from "@/lib/whatsapp-templates";
+import { getWhatsAppHistoryFn, logWhatsAppMessageFn, setClientOptOutFn } from "@/lib/portal.functions";
+import { useSession } from "@/lib/session";
 
 interface WhatsAppPanelProps {
   /** Single founder (with .clients) for personalised mode, or null for blank compose */
@@ -20,6 +22,11 @@ interface WhatsAppPanelProps {
 
 export function WhatsAppPanel({ founder, compact }: WhatsAppPanelProps) {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const fetchHistory = useServerFn(getWhatsAppHistoryFn);
+  const logMessage = useServerFn(logWhatsAppMessageFn);
+  const optOut = useServerFn(setClientOptOutFn);
+
   const clientId: string | null = founder?.client_id ?? founder?.clients?.id ?? null;
   const [templateKey, setTemplateKey] = useState<TemplateKey>("founder_welcome");
   const tpl = getTemplate(templateKey);
@@ -31,47 +38,39 @@ export function WhatsAppPanel({ founder, compact }: WhatsAppPanelProps) {
   const merged = { ...autofill, ...vars };
   const body = overrideBody ?? tpl.render(merged);
 
-  const optOut = founder?.clients?.whatsapp_opt_out ?? false;
+  const optedOut = founder?.clients?.whatsapp_opt_out ?? false;
 
   const { data: history } = useQuery({
-    queryKey: ["whatsapp_messages", clientId],
-    enabled: !!clientId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("whatsapp_messages")
-        .select("*")
-        .eq("client_id", clientId!)
-        .order("sent_at", { ascending: false })
-        .limit(15);
-      return data || [];
-    },
+    queryKey: ["whatsapp_messages", clientId, session?.sessionId],
+    enabled: !!clientId && !!session?.sessionId,
+    queryFn: () => fetchHistory({ data: { sessionId: session!.sessionId, clientId: clientId!, limit: 15 } }),
   });
 
   const [sending, setSending] = useState(false);
 
   async function send() {
-    if (!clientId) return toast.error("No recipient");
-    if (optOut) return toast.error("This client has opted out of WhatsApp");
+    if (!clientId || !session) return toast.error("No recipient");
+    if (optedOut) return toast.error("This client has opted out of WhatsApp");
     setSending(true);
-    const { error } = await supabase.from("whatsapp_messages").insert({
-      client_id: clientId,
-      template_key: templateKey,
-      body,
-      status: "sent",
-    });
-    setSending(false);
-    if (error) return toast.error(error.message);
-    toast.success("Message sent", { description: founder?.clients?.full_name });
-    setOverrideBody(null);
-    qc.invalidateQueries({ queryKey: ["whatsapp_messages", clientId] });
+    try {
+      await logMessage({ data: { sessionId: session.sessionId, clientId, templateKey, body } });
+      toast.success("Message sent", { description: founder?.clients?.full_name });
+      setOverrideBody(null);
+      qc.invalidateQueries({ queryKey: ["whatsapp_messages", clientId] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    } finally { setSending(false); }
   }
 
   async function toggleOptOut(next: boolean) {
-    if (!clientId) return;
-    const { error } = await supabase.from("clients").update({ whatsapp_opt_out: next }).eq("id", clientId);
-    if (error) return toast.error(error.message);
-    qc.invalidateQueries();
-    toast.success(next ? "Client opted out" : "Client opted in");
+    if (!clientId || !session) return;
+    try {
+      await optOut({ data: { sessionId: session.sessionId, clientId, optedOut: next } });
+      qc.invalidateQueries();
+      toast.success(next ? "Client opted out" : "Client opted in");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
   }
 
   return (
@@ -85,7 +84,7 @@ export function WhatsAppPanel({ founder, compact }: WhatsAppPanelProps) {
         {founder && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-muted-foreground">Opted in</span>
-            <Switch checked={!optOut} onCheckedChange={(v) => toggleOptOut(!v)} />
+            <Switch checked={!optedOut} onCheckedChange={(v) => toggleOptOut(!v)} />
           </div>
         )}
       </div>
@@ -124,9 +123,9 @@ export function WhatsAppPanel({ founder, compact }: WhatsAppPanelProps) {
             onChange={(e) => setOverrideBody(e.target.value)}
             className="min-h-[220px] bg-secondary/40 font-mono text-xs leading-relaxed"
           />
-          <Button onClick={send} disabled={sending || !clientId || optOut} className="w-full">
+          <Button onClick={send} disabled={sending || !clientId || optedOut} className="w-full">
             {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-            {optOut ? "Recipient opted out" : "Send via WhatsApp"}
+            {optedOut ? "Recipient opted out" : "Send via WhatsApp"}
           </Button>
           <div className="text-[10px] text-muted-foreground text-center">
             Logged to message ledger. Real WhatsApp Business API delivery pending integration.

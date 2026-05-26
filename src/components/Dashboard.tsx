@@ -1,39 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Users, Crown, CalendarDays, Sparkles, Clock, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Layout";
 import { StatCard } from "@/components/StatCard";
-
-function startOfWeek() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+import { getDashboardStatsFn } from "@/lib/portal.functions";
+import { useSession } from "@/lib/session";
 
 export function DashboardContent({ eyebrow = "The Sanctuary · Today", title = "Good morning." }: { eyebrow?: string; title?: string }) {
+  const { session } = useSession();
+  const fetchStats = useServerFn(getDashboardStatsFn);
   const { data: stats } = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
-      const weekStart = startOfWeek().toISOString().slice(0, 10);
-      const [clients, founders, todayAppts, weeklyRefresh, upcoming] = await Promise.all([
-        supabase.from("clients").select("*", { count: "exact", head: true }),
-        supabase.from("founder_circle").select("*", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("appointments").select("id, scheduled_time, appointment_type, location, status, clients(full_name)").eq("scheduled_date", today).order("scheduled_time"),
-        supabase.from("perks_usage").select("*", { count: "exact", head: true }).eq("perk_type", "weekly_refresh").eq("status", "used").gte("used_date", weekStart),
-        supabase.from("appointments").select("id, scheduled_date, scheduled_time, appointment_type, clients(full_name)").gte("scheduled_date", today).order("scheduled_date").limit(5),
-      ]);
-      return {
-        clientsCount: clients.count ?? 0,
-        foundersCount: founders.count ?? 0,
-        todayAppointments: todayAppts.data ?? [],
-        weeklyRefreshCount: weeklyRefresh.count ?? 0,
-        upcoming: upcoming.data ?? [],
-      };
-    },
+    queryKey: ["dashboard-stats", session?.sessionId],
+    enabled: !!session?.sessionId,
+    queryFn: () => fetchStats({ data: { sessionId: session!.sessionId } }),
   });
 
   return (
