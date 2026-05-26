@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
 import { useSession, RequireRole } from "@/lib/session";
 import { toast } from "sonner";
 import {
@@ -14,6 +13,12 @@ import { normalizeKePhone } from "@/lib/phone";
 import { initiateMpesaStkPush, recordCashPayment, addPaymentLineItems } from "@/lib/payments.functions";
 import { sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { ArtisanEarnings } from "@/components/ArtisanEarnings";
+import {
+  getArtisanAppointmentsFn, getArtisanCollectionFn, searchClientsFn,
+  getClientByIdFn, getFirstClientIdFn, createClientFn, createNotificationFn,
+  getFounderWithPerksFn, createAppointmentFn, redeemPerkFn, logActivityFn,
+  getActiveServicesFn,
+} from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/artisan/today")({
   component: () => (
