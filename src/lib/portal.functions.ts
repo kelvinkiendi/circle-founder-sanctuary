@@ -165,7 +165,7 @@ export const redeemPerkFn = createServerFn({ method: "POST" })
     if (!founder?.id) return { ok: false as const };
     const { error } = await supabaseAdmin.from("perks_usage").update({
       status: "used", used_date: data.date, related_appointment_id: data.appointmentId,
-    }).eq("perk_type", data.perkType).eq("status", "available").eq("founder_id", founder.id);
+    }).eq("perk_type", data.perkType as any).eq("status", "available").eq("founder_id", founder.id);
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
