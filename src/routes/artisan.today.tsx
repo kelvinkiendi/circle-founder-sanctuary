@@ -63,17 +63,11 @@ function ArtisanScheduler() {
   const today = new Date().toISOString().slice(0, 10);
 
   const qc = useQueryClient();
+  const fetchAppts = useServerFn(getArtisanAppointmentsFn);
   const { data: appts } = useQuery({
-    queryKey: ["artisan-appts", techTag, today],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select("id, scheduled_date, scheduled_time, duration_minutes, appointment_type, status, location, notes, created_by, client_id, clients(full_name, phone, client_type)")
-        .eq("created_by", techTag)
-        .gte("scheduled_date", today)
-        .order("scheduled_date").order("scheduled_time");
-      return data ?? [];
-    },
+    queryKey: ["artisan-appts", techTag, today, session?.sessionId],
+    enabled: !!session?.sessionId,
+    queryFn: () => fetchAppts({ data: { sessionId: session!.sessionId, techTag, today } }),
     refetchInterval: 30_000,
   });
 
@@ -200,21 +194,13 @@ function ArtisanScheduler() {
 
 // ============ Today's Collection Summary ============
 function CollectionSummary({ techTag, today }: { techTag: string; today: string }) {
+  const { session } = useSession();
+  const fetchCollection = useServerFn(getArtisanCollectionFn);
   const [expanded, setExpanded] = useState(false);
   const { data } = useQuery({
-    queryKey: ["artisan-collection", techTag, today],
-    queryFn: async () => {
-      const start = `${today}T00:00:00`;
-      const end = `${today}T23:59:59`;
-      const { data: pays } = await supabase
-        .from("payments")
-        .select("id, amount_ksh, phone, status, mpesa_receipt_number, description, paid_at, created_by")
-        .eq("status", "paid")
-        .eq("created_by", techTag)
-        .gte("paid_at", start).lte("paid_at", end)
-        .order("paid_at", { ascending: false });
-      return pays ?? [];
-    },
+    queryKey: ["artisan-collection", techTag, today, session?.sessionId],
+    enabled: !!session?.sessionId,
+    queryFn: () => fetchCollection({ data: { sessionId: session!.sessionId, techTag, today } }),
     refetchInterval: 30_000,
   });
   const rows = data ?? [];
@@ -312,25 +298,20 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
   const [desc, setDesc] = useState<string>("");
   const [clientQ, setClientQ] = useState("");
 
+  const { session } = useSession();
+  const fetchServices = useServerFn(getActiveServicesFn);
+  const searchClients = useServerFn(searchClientsFn);
+
   const { data: services = [] } = useQuery({
-    queryKey: ["bill-services"],
-    queryFn: async () => {
-      const { data } = await (supabase as any).from("services")
-        .select("id, name, price_ksh, duration_minutes")
-        .eq("status", "active").order("display_order");
-      return data ?? [];
-    },
+    queryKey: ["bill-services", session?.sessionId],
+    enabled: !!session?.sessionId,
+    queryFn: () => fetchServices({ data: { sessionId: session!.sessionId } }),
   });
 
-  const { data: searchClients = [] } = useQuery({
-    queryKey: ["bill-client-search", clientQ],
-    queryFn: async () => {
-      let qb = supabase.from("clients").select("id, full_name, phone, whatsapp_number, client_type").limit(10);
-      if (clientQ.trim()) qb = qb.or(`full_name.ilike.%${clientQ}%,phone.ilike.%${clientQ}%`);
-      const { data } = await qb;
-      return data ?? [];
-    },
-    enabled: !client,
+  const { data: searchClientsResults = [] } = useQuery({
+    queryKey: ["bill-client-search", clientQ, session?.sessionId],
+    enabled: !client && !!session?.sessionId,
+    queryFn: () => searchClients({ data: { sessionId: session!.sessionId, q: clientQ, fields: "mini", limit: 10 } }),
   });
 
   const computedTotal = rows.reduce((s, r) => s + r.unit_price * r.quantity, 0);
@@ -559,13 +540,15 @@ function NewBookingSheet({
   const [perkRedeem, setPerkRedeem] = useState<string | null>(null);
   const [notifyClient, setNotifyClient] = useState(true);
 
+  const { session } = useSession();
+  const fetchClient = useServerFn(getClientByIdFn);
   // Prefill client if rebooking
   useEffect(() => {
-    if (!prefillClientId) return;
-    supabase.from("clients").select("*").eq("id", prefillClientId).maybeSingle().then(({ data }) => {
+    if (!prefillClientId || !session) return;
+    fetchClient({ data: { sessionId: session.sessionId, id: prefillClientId } }).then((data: any) => {
       if (data) { setClient(data); setStep(2); }
     });
-  }, [prefillClientId]);
+  }, [prefillClientId, session, fetchClient]);
 
   // Update duration on service select
   useEffect(() => {
@@ -636,39 +619,44 @@ function Step1Client({ onPick }: { onPick: (c: any) => void }) {
   const [newWa, setNewWa] = useState("");
   const qc = useQueryClient();
 
+  const { session } = useSession();
+  const searchClients = useServerFn(searchClientsFn);
+  const createClient = useServerFn(createClientFn);
+  const notifyReception = useServerFn(createNotificationFn);
+
   const { data: clients } = useQuery({
-    queryKey: ["sched-clients", q],
-    queryFn: async () => {
-      let qb = supabase.from("clients").select("id, full_name, phone, whatsapp_number, client_type, notes").limit(15);
-      if (q.trim()) qb = qb.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%`);
-      const { data } = await qb;
-      return data ?? [];
-    },
+    queryKey: ["sched-clients", q, session?.sessionId],
+    enabled: !!session?.sessionId,
+    queryFn: () => searchClients({ data: { sessionId: session!.sessionId, q, fields: "full", limit: 15 } }),
   });
 
   const addNew = async () => {
+    if (!session) return;
     const phone = normalizeKePhone(newPhone);
     if (!newName.trim() || !phone) { toast.error("Name and valid phone required"); return; }
     const wa = newWa ? normalizeKePhone(newWa) : phone;
-    const { data, error } = await supabase.from("clients").insert({
-      full_name: newName.trim(),
-      phone,
-      whatsapp_number: wa,
-      client_type: "regular",
-      notes: "[ARTISAN-ADD] Needs profile completion by Reception",
-    }).select().single();
-    if (error) { toast.error(error.message); return; }
-    toast.success("Client added — flagged for Reception");
-    qc.invalidateQueries({ queryKey: ["sched-clients"] });
-    onPick(data);
+    try {
+      const data = await createClient({ data: {
+        sessionId: session.sessionId,
+        full_name: newName.trim(),
+        phone: phone!,
+        whatsapp_number: wa ?? undefined,
+        notes: "[ARTISAN-ADD] Needs profile completion by Reception",
+      } });
+      toast.success("Client added — flagged for Reception");
+      qc.invalidateQueries({ queryKey: ["sched-clients"] });
+      onPick(data);
+    } catch (e: any) { toast.error(e?.message ?? "Failed"); }
   };
 
   const askReception = async () => {
+    if (!session) return;
     if (!newPhone) { toast.error("Enter phone first"); return; }
-    await supabase.from("notifications").insert({
+    await notifyReception({ data: {
+      sessionId: session.sessionId,
       kind: "registration_request",
       message: `Artisan requests new client registration: ${newPhone}`,
-    });
+    } });
     toast.success("Sent to Reception");
     setAdding(false);
   };
