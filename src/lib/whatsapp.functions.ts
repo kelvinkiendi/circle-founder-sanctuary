@@ -2,10 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getTemplate, type TemplateKey } from "@/lib/whatsapp-templates";
+import { requireStaff } from "@/lib/staff-auth.server";
 
 const SENDER_NUMBER = "+254722365861";
 
 const ConfirmInput = z.object({
+  sessionId: z.string().uuid(),
   clientId: z.string().uuid(),
   appointmentId: z.string().uuid().optional(),
   templateKey: z.enum([
@@ -28,6 +30,7 @@ const ConfirmInput = z.object({
 export const sendWhatsAppMessage = createServerFn({ method: "POST" })
   .inputValidator((i) => ConfirmInput.parse(i))
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId, ["admin", "manager", "technician", "reception"]);
     // Load client and check opt-out
     const { data: client, error: cErr } = await supabaseAdmin
       .from("clients")
