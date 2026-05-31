@@ -381,7 +381,7 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
                 className="w-full pl-10 pr-3 py-2.5 border border-[#d4b896] rounded-lg bg-white text-sm" autoFocus />
             </div>
             <div className="mt-2 max-h-60 overflow-y-auto space-y-1">
-              {searchClients.map((c: any) => (
+              {searchClientsResults.map((c: any) => (
                 <button key={c.id} onClick={() => { setClient(c); setPhone(c.phone ?? ""); }}
                   className="w-full text-left p-2.5 bg-white border border-[#d4b896]/40 rounded-lg active:bg-[#F5F5DC] flex items-center gap-2">
                   <div className="flex-1 min-w-0">
@@ -391,7 +391,7 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
                   <ChevronRight className="h-4 w-4 text-[#8b6f47]" />
                 </button>
               ))}
-              {searchClients.length === 0 && <div className="text-xs text-[#8b6f47] italic p-3 text-center">No clients found.</div>}
+              {searchClientsResults.length === 0 && <div className="text-xs text-[#8b6f47] italic p-3 text-center">No clients found.</div>}
             </div>
           </div>
         ) : (
