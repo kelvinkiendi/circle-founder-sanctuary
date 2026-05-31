@@ -327,6 +327,7 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
   const removeRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
 
   const submit = async () => {
+    if (!session) { toast.error("Please sign in again"); return; }
     if (!client) { toast.error("Pick a client"); return; }
     if (rows.length === 0) { toast.error("Add at least one service"); return; }
     if (total <= 0) { toast.error("Total must be > 0"); return; }
@@ -336,6 +337,7 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
       if (method === "cash" || method === "card") {
         await cash({
           data: {
+            sessionId: session.sessionId,
             client_id: client.id,
             amount_ksh: total,
             description,
@@ -353,7 +355,7 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
       if (!ph) { toast.error("Invalid phone"); setBusy(false); return; }
       const res = await stk({
         data: {
-          sessionId: session?.sessionId,
+          sessionId: session.sessionId,
           client_id: client.id,
           payment_type: "other",
           amount_ksh: total,
@@ -362,7 +364,7 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
           related_appointment_id: appt?.id ?? null,
         },
       });
-      try { await addLines({ data: { payment_id: res.payment_id, line_items: rows } }); } catch {}
+      try { await addLines({ data: { sessionId: session.sessionId, payment_id: res.payment_id, line_items: rows } }); } catch {}
       toast.success(res.prompt);
       onDone();
     } catch (e: any) {
@@ -725,14 +727,14 @@ function Step2Service({
   const today = new Date().toISOString().slice(0, 10);
 
   // Load active services from catalog (admin-managed)
+  const { session } = useSession();
+  const fetchServices = useServerFn(getActiveServicesFn);
+  const fetchDayBusy = useServerFn(getArtisanAppointmentsFn);
+
   const { data: catalog = [] } = useQuery({
     queryKey: ["booking-services-catalog"],
-    queryFn: async () => {
-      const { data } = await (supabase as any).from("services")
-        .select("id, name, price_ksh, duration_minutes, category, status")
-        .eq("status", "active").order("display_order").order("name");
-      return data ?? [];
-    },
+    enabled: !!session?.sessionId,
+    queryFn: () => fetchServices({ data: { sessionId: session!.sessionId } }),
   });
 
   // Map a catalog service's category/name to the appointment_type enum
@@ -751,15 +753,8 @@ function Step2Service({
   // Existing appts for this tech on this date — to block overlapping slots
   const { data: dayAppts } = useQuery({
     queryKey: ["sched-day", techTag, date],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select("scheduled_time, duration_minutes, appointment_type")
-        .eq("created_by", techTag).eq("scheduled_date", date)
-        .neq("status", "cancelled");
-      return data ?? [];
-    },
-    enabled: !!date,
+    queryFn: () => fetchDayBusy({ data: { sessionId: session!.sessionId, techTag, today: date } }),
+    enabled: !!date && !!session?.sessionId,
   });
 
   const busyRanges = useMemo(() => (dayAppts ?? []).map((a: any) => {
@@ -1008,6 +1003,11 @@ function Step4Confirm({
   client, service, customService, date, time, duration, location, travelAddr, notes, perkRedeem,
   techTag, notifyClient, setNotifyClient, onBack, onDone,
 }: any) {
+  const { session } = useSession();
+  const createAppointment = useServerFn(createAppointmentFn);
+  const redeemPerk = useServerFn(redeemPerkFn);
+  const logActivity = useServerFn(logActivityFn);
+  const sendWhatsApp = useServerFn(sendWhatsAppMessage);
   const meta = SERVICE_META[service as ServiceType];
   const label = customService?.name ?? meta.label;
   const basePrice = customService ? customService.price_ksh : meta.priceKsh;
@@ -1026,32 +1026,35 @@ function Step4Confirm({
         `[PRICE:${price}]`,
       ].filter(Boolean).join(" ");
 
-      const { data: appt, error } = await supabase.from("appointments").insert({
-        client_id: client.id,
-        appointment_type: service,
-        service_id: customService?.id ?? null,
-        service_description: customService?.name ?? null,
-        scheduled_date: date,
-        scheduled_time: time,
-        duration_minutes: duration,
-        location,
-        notes: composedNotes,
-        status: "booked",
-        created_by: techTag,
-      } as any).select().single();
-      if (error) throw error;
+      if (!session) throw new Error("Unauthorized");
+      const appt = await createAppointment({ data: {
+        sessionId: session.sessionId,
+        appt: {
+          client_id: client.id,
+          appointment_type: service,
+          service_id: customService?.id ?? null,
+          service_description: customService?.name ?? null,
+          scheduled_date: date,
+          scheduled_time: time,
+          duration_minutes: duration,
+          location,
+          notes: composedNotes,
+          status: "booked",
+          created_by: techTag,
+        },
+      } });
 
       if (perkRedeem) {
-        await supabase.from("perks_usage").update({
-          status: "used", used_date: date, related_appointment_id: appt.id,
-        }).eq("perk_type", perkRedeem).eq("status", "available")
-          .eq("founder_id", (await supabase.from("founder_circle").select("id").eq("client_id", client.id).maybeSingle()).data?.id ?? "");
+        await redeemPerk({ data: {
+          sessionId: session.sessionId, clientId: client.id, perkType: perkRedeem, appointmentId: appt.id, date,
+        } });
       }
 
       if (notifyClient && (client.whatsapp_number || client.phone)) {
         try {
-          await sendWhatsAppMessage({
+          await sendWhatsApp({
             data: {
+              sessionId: session.sessionId,
               clientId: client.id,
               appointmentId: appt.id,
               templateKey: "appointment_confirmation",
@@ -1069,10 +1072,10 @@ function Step4Confirm({
       }
 
 
-      await supabase.from("activity_log").insert({
-        entity: "appointment", entity_id: appt.id, action: "self_booked",
+      await logActivity({ data: {
+        sessionId: session.sessionId, entity: "appointment", entity_id: appt.id, action: "self_booked",
         actor: techTag, metadata: { service, perk: perkRedeem, price },
-      });
+      } });
 
       return appt;
     },
@@ -1123,6 +1126,9 @@ function Row({ icon, label, value }: { icon: React.ReactNode; label: string; val
 
 // ============ Block Time Sheet ============
 function BlockTimeSheet({ onClose, onDone, techTag }: { onClose: () => void; onDone: () => void; techTag: string }) {
+  const { session } = useSession();
+  const getFirstClient = useServerFn(getFirstClientIdFn);
+  const createAppointment = useServerFn(createAppointmentFn);
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [time, setTime] = useState("12:00:00");
@@ -1131,11 +1137,11 @@ function BlockTimeSheet({ onClose, onDone, techTag }: { onClose: () => void; onD
 
   const save = useMutation({
     mutationFn: async () => {
-      // Use a sentinel client_id: pick any (we technically need a client_id). Use first client or insert a placeholder.
-      const { data: anyClient } = await supabase.from("clients").select("id").limit(1).maybeSingle();
+      if (!session) throw new Error("Unauthorized");
+      const anyClient = await getFirstClient({ data: { sessionId: session.sessionId } });
       if (!anyClient) throw new Error("System has no client records yet");
-      const { error } = await supabase.from("appointments").insert({
-        client_id: anyClient.id, // sentinel; the [BLOCK] note overrides display
+      await createAppointment({ data: { sessionId: session.sessionId, appt: {
+        client_id: anyClient.id,
         appointment_type: "full_manicure",
         scheduled_date: date,
         scheduled_time: time,
@@ -1144,8 +1150,7 @@ function BlockTimeSheet({ onClose, onDone, techTag }: { onClose: () => void; onD
         location: "studio",
         notes: `[BLOCK] ${reason}`,
         created_by: techTag,
-      });
-      if (error) throw error;
+      } } });
     },
     onSuccess: () => { toast.success("Time blocked"); onDone(); },
     onError: (e: any) => toast.error(e.message),

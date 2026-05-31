@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireStaff } from "@/lib/staff-auth.server";
 
 const PinSchema = z.object({
   pin: z.string().regex(/^\d{4}$/),
@@ -88,10 +89,12 @@ export const adminResetPinFn = createServerFn({ method: "POST" })
 /** Securely hash & set a staff PIN so it works on the login screen. */
 export const setStaffPinFn = createServerFn({ method: "POST" })
   .inputValidator((i) => z.object({
+    sessionId: z.string().uuid(),
     staffId: z.string().uuid(),
     pin: z.string().regex(/^\d{4}$/),
   }).parse(i))
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId, ["admin"]);
     const { data: ok, error } = await supabaseAdmin.rpc("set_staff_pin", {
       p_staff_id: data.staffId, p_pin: data.pin,
     });
