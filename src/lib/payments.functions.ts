@@ -1,6 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireStaff, type StaffRole } from "@/lib/staff-auth.server";
+
+const SessionField = { sessionId: z.string().uuid().optional() } as const;
+
+async function gateStaff(sessionId: string | undefined, roles?: StaffRole[]) {
+  if (!sessionId) throw new Error("Unauthorized");
+  await requireStaff(sessionId, roles);
+}
 
 const FOUNDER_DISCOUNT = 0.15;
 const ENROLL_FULL = 25000;
@@ -92,8 +100,9 @@ async function darajaStkPush(args: {
 
 // Compute amount for a payment type given context
 export const computePaymentAmount = createServerFn({ method: "POST" })
-  .inputValidator((d: { payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
+  .inputValidator((d: { sessionId?: string; payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
     z.object({
+      ...SessionField,
       payment_type: PaymentTypeEnum,
       base_amount: z.number().optional(),
       outside_area: z.boolean().optional(),
@@ -101,6 +110,7 @@ export const computePaymentAmount = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId);
     switch (data.payment_type) {
       case "enrollment_full": return { amount: ENROLL_FULL };
       case "enrollment_installment_1": return { amount: ENROLL_INSTALLMENT_1 };
@@ -121,6 +131,7 @@ export const computePaymentAmount = createServerFn({ method: "POST" })
 // Initiate STK Push (simulated — integrates with Daraja when credentials added)
 export const initiateMpesaStkPush = createServerFn({ method: "POST" })
   .inputValidator((d: {
+    sessionId?: string;
     client_id: string;
     founder_id?: string | null;
     payment_type: string;
@@ -132,6 +143,7 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
     due_date?: string | null;
   }) =>
     z.object({
+      ...SessionField,
       client_id: z.string().uuid(),
       founder_id: z.string().uuid().nullable().optional(),
       payment_type: PaymentTypeEnum,
@@ -144,6 +156,7 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId);
     const phone = normalizeMsisdn(data.phone);
     let checkoutId = genCheckoutId();
     let live = false;
