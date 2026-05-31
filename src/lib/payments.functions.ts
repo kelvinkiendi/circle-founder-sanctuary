@@ -100,7 +100,7 @@ async function darajaStkPush(args: {
 
 // Compute amount for a payment type given context
 export const computePaymentAmount = createServerFn({ method: "POST" })
-  .inputValidator((d: { sessionId: string; payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
+  .inputValidator((d: { sessionId?: string; payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
     z.object({
       ...SessionField,
       payment_type: PaymentTypeEnum,
