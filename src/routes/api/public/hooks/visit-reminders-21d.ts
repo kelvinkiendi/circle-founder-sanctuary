@@ -9,10 +9,15 @@ export const Route = createFileRoute("/api/public/hooks/visit-reminders-21d")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // Auth: require Supabase anon key in apikey header (cron pattern)
-        const apikey = request.headers.get("apikey");
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY;
-        if (!apikey || !expected || apikey !== expected) {
+        // Auth: require private CRON_SECRET (Bearer token or apikey header)
+        const expected = process.env.CRON_SECRET;
+        const authHeader = request.headers.get("authorization") ?? "";
+        const bearer = authHeader.toLowerCase().startsWith("bearer ")
+          ? authHeader.slice(7).trim()
+          : "";
+        const apikey = request.headers.get("apikey") ?? request.headers.get("x-cron-secret") ?? "";
+        const provided = bearer || apikey;
+        if (!expected || !provided || provided !== expected) {
           return new Response("Unauthorized", { status: 401 });
         }
 
