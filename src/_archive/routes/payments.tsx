@@ -335,7 +335,7 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
               <CardTitle>Outstanding Installments</CardTitle>
               {!readOnly && (
                 <Button size="sm" variant="outline" onClick={async () => {
-                  const r = await sweep(); toast.success(`Suspension sweep complete — ${r.suspended} updated`); loadAll();
+                  const r = await sweep({ data: { sessionId } }); toast.success(`Suspension sweep complete — ${r.suspended} updated`); loadAll();
                 }}>Run 45-day suspension sweep</Button>
               )}
             </CardHeader>
