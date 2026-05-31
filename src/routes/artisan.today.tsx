@@ -10,6 +10,7 @@ import {
   Wallet, Smartphone, Banknote, Trash2,
 } from "lucide-react";
 import { normalizeKePhone } from "@/lib/phone";
+import { supabase } from "@/integrations/supabase/client";
 import { initiateMpesaStkPush, recordCashPayment, addPaymentLineItems } from "@/lib/payments.functions";
 import { sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { ArtisanEarnings } from "@/components/ArtisanEarnings";
