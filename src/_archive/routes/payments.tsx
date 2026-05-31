@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Download, RefreshCw, Send, CheckCircle2, XCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/session";
 import {
   computePaymentAmount,
   initiateMpesaStkPush,
