@@ -131,7 +131,7 @@ export const computePaymentAmount = createServerFn({ method: "POST" })
 // Initiate STK Push (simulated — integrates with Daraja when credentials added)
 export const initiateMpesaStkPush = createServerFn({ method: "POST" })
   .inputValidator((d: {
-    sessionId: string;
+    sessionId?: string;
     client_id: string;
     founder_id?: string | null;
     payment_type: string;
