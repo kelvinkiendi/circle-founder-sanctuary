@@ -57,6 +57,8 @@ function statusVariant(s: string) {
 }
 
 export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) {
+  const { session } = useSession();
+  const sessionId = session?.sessionId ?? "";
   const fetchSummary = useServerFn(getPaymentSummary);
   const fetchOutstanding = useServerFn(getOutstandingInstallments);
   const computeAmt = useServerFn(computePaymentAmount);
@@ -85,10 +87,11 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
   const [computed, setComputed] = useState(0);
 
   async function loadAll() {
+    if (!sessionId) return;
     setLoading(true);
     const [s, o, c, f] = await Promise.all([
-      fetchSummary(),
-      fetchOutstanding(),
+      fetchSummary({ data: { sessionId } }),
+      fetchOutstanding({ data: { sessionId } }),
       supabase.from("clients").select("id, full_name, phone").order("full_name"),
       supabase.from("founder_circle").select("id, founder_number, client_id, clients(full_name, phone)").order("founder_number"),
     ]);
@@ -97,17 +100,19 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
     setLoading(false);
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll(); }, [sessionId]);
 
   // Recompute amount when relevant fields change
   useEffect(() => {
+    if (!sessionId) return;
     computeAmt({ data: {
+      sessionId,
       payment_type: form.payment_type as any,
       base_amount: form.base_amount,
       outside_area: form.outside_area,
       apply_founder_rate: form.apply_founder_rate,
     }}).then((r) => setComputed(r.amount));
-  }, [form.payment_type, form.base_amount, form.outside_area, form.apply_founder_rate]);
+  }, [sessionId, form.payment_type, form.base_amount, form.outside_area, form.apply_founder_rate]);
 
   function onFounderChange(id: string) {
     const f = founders.find((x) => x.id === id);
@@ -129,6 +134,7 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
       return;
     }
     const res = await stkPush({ data: {
+      sessionId,
       client_id: form.client_id,
       founder_id: form.founder_id || null,
       payment_type: form.payment_type as any,
@@ -141,17 +147,17 @@ export function PaymentsPage({ readOnly = false }: { readOnly?: boolean } = {}) 
   }
 
   async function markPaid(id: string) {
-    await updateStatus({ data: { payment_id: id, status: "paid" } });
+    await updateStatus({ data: { sessionId, payment_id: id, status: "paid" } });
     toast.success("Marked paid — receipt generated");
     loadAll();
   }
   async function markFailed(id: string) {
-    await updateStatus({ data: { payment_id: id, status: "failed", failure_reason: "Manual" } });
+    await updateStatus({ data: { sessionId, payment_id: id, status: "failed", failure_reason: "Manual" } });
     toast("Marked failed");
     loadAll();
   }
   async function retryOne(id: string) {
-    const r = await retry({ data: { payment_id: id } });
+    const r = await retry({ data: { sessionId, payment_id: id } });
     toast.success(`New STK push: ${r.checkout_request_id}`);
     loadAll();
   }
