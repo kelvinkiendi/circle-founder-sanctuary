@@ -3,7 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireStaff, type StaffRole } from "@/lib/staff-auth.server";
 
-const SessionField = { sessionId: z.string().uuid().optional() } as const;
+const SessionField = { sessionId: z.string().uuid() } as const;
 
 async function gateStaff(sessionId: string | undefined, roles?: StaffRole[]) {
   if (!sessionId) throw new Error("Unauthorized");
@@ -131,7 +131,8 @@ export const computePaymentAmount = createServerFn({ method: "POST" })
 // Initiate STK Push (simulated — integrates with Daraja when credentials added)
 export const initiateMpesaStkPush = createServerFn({ method: "POST" })
   .inputValidator((d: {
-    sessionId?: string;
+    sessionId: string;
+    sessionId: string;
     client_id: string;
     founder_id?: string | null;
     payment_type: string;
@@ -208,8 +209,9 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
 
 // Manually mark payment paid/failed (admin reconciliation + simulation)
 export const updatePaymentStatus = createServerFn({ method: "POST" })
-  .inputValidator((d: { payment_id: string; status: "paid" | "failed" | "cancelled"; mpesa_receipt?: string; failure_reason?: string }) =>
+  .inputValidator((d: { sessionId: string; payment_id: string; status: "paid" | "failed" | "cancelled"; mpesa_receipt?: string; failure_reason?: string }) =>
     z.object({
+      ...SessionField,
       payment_id: z.string().uuid(),
       status: z.enum(["paid", "failed", "cancelled"]),
       mpesa_receipt: z.string().optional(),
@@ -217,6 +219,7 @@ export const updatePaymentStatus = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await gateStaff(data.sessionId, ["admin", "manager"]);
     const patch: any = { status: data.status };
     if (data.status === "paid") {
       patch.paid_at = new Date().toISOString();
@@ -247,8 +250,9 @@ export const updatePaymentStatus = createServerFn({ method: "POST" })
 
 // Retry: send a fresh STK push for a failed/cancelled payment
 export const retryPayment = createServerFn({ method: "POST" })
-  .inputValidator((d: { payment_id: string }) => z.object({ payment_id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { sessionId: string; payment_id: string }) => z.object({ ...SessionField, payment_id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
+    await gateStaff(data.sessionId, ["admin", "manager", "reception"]);
     const { data: original, error } = await supabaseAdmin
       .from("payments").select("*").eq("id", data.payment_id).single();
     if (error || !original) throw new Error("Payment not found");
@@ -272,8 +276,10 @@ export const retryPayment = createServerFn({ method: "POST" })
   });
 
 // Payment dashboard summary
-export const getPaymentSummary = createServerFn({ method: "GET" })
-  .handler(async () => {
+export const getPaymentSummary = createServerFn({ method: "POST" })
+  .inputValidator((d: { sessionId: string }) => z.object({ ...SessionField }).parse(d))
+  .handler(async ({ data }) => {
+    await gateStaff(data.sessionId, ["admin", "manager", "guardian"]);
     const now = new Date();
     const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7);
@@ -302,8 +308,10 @@ export const getPaymentSummary = createServerFn({ method: "GET" })
   });
 
 // Outstanding installments
-export const getOutstandingInstallments = createServerFn({ method: "GET" })
-  .handler(async () => {
+export const getOutstandingInstallments = createServerFn({ method: "POST" })
+  .inputValidator((d: { sessionId: string }) => z.object({ ...SessionField }).parse(d))
+  .handler(async ({ data }) => {
+    await gateStaff(data.sessionId, ["admin", "manager", "guardian"]);
     const { data: founders } = await supabaseAdmin
       .from("founder_circle")
       .select("id, founder_number, client_id, enrollment_date, total_paid_ksh, enrollment_fee_paid, payment_method, status, clients(full_name, phone)")
@@ -329,7 +337,9 @@ export const getOutstandingInstallments = createServerFn({ method: "GET" })
 
 // Run suspension sweep
 export const runSuspensionSweep = createServerFn({ method: "POST" })
-  .handler(async () => {
+  .inputValidator((d: { sessionId: string }) => z.object({ ...SessionField }).parse(d))
+  .handler(async ({ data }) => {
+    await gateStaff(data.sessionId, ["admin"]);
     const { data, error } = await supabaseAdmin.rpc("suspend_overdue_founders");
     if (error) throw new Error(error.message);
     return { suspended: data ?? 0 };
@@ -348,6 +358,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
     method?: "cash" | "card";
   }) =>
     z.object({
+      ...SessionField,
       client_id: z.string().uuid(),
       founder_id: z.string().uuid().nullable().optional(),
       amount_ksh: z.number().positive(),
@@ -364,6 +375,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await gateStaff(data.sessionId, ["admin", "manager", "technician", "reception"]);
     const receiptNo = genReceiptNumber();
     const isCard = data.method === "card";
     const { data: payment, error } = await supabaseAdmin.from("payments").insert({
@@ -419,10 +431,12 @@ export const recordCashPayment = createServerFn({ method: "POST" })
 // Attach line items to an existing (M-Pesa) payment
 export const addPaymentLineItems = createServerFn({ method: "POST" })
   .inputValidator((d: {
+    sessionId: string;
     payment_id: string;
     line_items: Array<{ service_id?: string | null; service_name: string; quantity: number; unit_price: number }>;
   }) =>
     z.object({
+      ...SessionField,
       payment_id: z.string().uuid(),
       line_items: z.array(z.object({
         service_id: z.string().uuid().nullable().optional(),
@@ -433,6 +447,7 @@ export const addPaymentLineItems = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await gateStaff(data.sessionId, ["admin", "manager", "technician", "reception"]);
     const { error } = await (supabaseAdmin as any).from("payment_line_items").insert(
       data.line_items.map((li) => ({
         payment_id: data.payment_id,
