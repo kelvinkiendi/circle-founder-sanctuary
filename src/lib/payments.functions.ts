@@ -3,7 +3,12 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireStaff, type StaffRole } from "@/lib/staff-auth.server";
 
-const SessionField = { sessionId: z.string().uuid() };
+const SessionField = { sessionId: z.string().uuid().optional() } as const;
+
+async function gateStaff(sessionId: string | undefined, roles?: StaffRole[]) {
+  if (!sessionId) throw new Error("Unauthorized");
+  await requireStaff(sessionId, roles);
+}
 
 const FOUNDER_DISCOUNT = 0.15;
 const ENROLL_FULL = 25000;
