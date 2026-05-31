@@ -126,6 +126,7 @@ export const computePaymentAmount = createServerFn({ method: "POST" })
 // Initiate STK Push (simulated — integrates with Daraja when credentials added)
 export const initiateMpesaStkPush = createServerFn({ method: "POST" })
   .inputValidator((d: {
+    sessionId: string;
     client_id: string;
     founder_id?: string | null;
     payment_type: string;
@@ -137,6 +138,7 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
     due_date?: string | null;
   }) =>
     z.object({
+      ...SessionField,
       client_id: z.string().uuid(),
       founder_id: z.string().uuid().nullable().optional(),
       payment_type: PaymentTypeEnum,
@@ -149,6 +151,7 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId);
     const phone = normalizeMsisdn(data.phone);
     let checkoutId = genCheckoutId();
     let live = false;
