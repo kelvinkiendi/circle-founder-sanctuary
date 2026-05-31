@@ -132,7 +132,6 @@ export const computePaymentAmount = createServerFn({ method: "POST" })
 export const initiateMpesaStkPush = createServerFn({ method: "POST" })
   .inputValidator((d: {
     sessionId: string;
-    sessionId: string;
     client_id: string;
     founder_id?: string | null;
     payment_type: string;
@@ -340,9 +339,9 @@ export const runSuspensionSweep = createServerFn({ method: "POST" })
   .inputValidator((d: { sessionId: string }) => z.object({ ...SessionField }).parse(d))
   .handler(async ({ data }) => {
     await gateStaff(data.sessionId, ["admin"]);
-    const { data, error } = await supabaseAdmin.rpc("suspend_overdue_founders");
+    const { data: suspended, error } = await supabaseAdmin.rpc("suspend_overdue_founders");
     if (error) throw new Error(error.message);
-    return { suspended: data ?? 0 };
+    return { suspended: suspended ?? 0 };
   });
 
 // Record a cash payment (paid immediately, generates receipt + WA queue + line items)
