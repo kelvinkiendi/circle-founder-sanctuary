@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-export type StaffRole = "admin" | "manager" | "technician" | "reception";
+export type StaffRole = "admin" | "manager" | "technician" | "reception" | "guardian";
 
 export type StaffSessionRow = {
   session_id: string;
