@@ -776,7 +776,7 @@ function Step2Service({
       const h = String(Math.floor(mins / 60)).padStart(2, "0");
       const m = String(mins % 60).padStart(2, "0");
       const slotEnd = mins + duration;
-      const busy = busyRanges.some(({ start, end }) => mins < end && slotEnd > start);
+      const busy = busyRanges.some(({ start, end }: { start: number; end: number }) => mins < end && slotEnd > start);
       out.push({ label: `${h}:${m}`, value: `${h}:${m}:00`, busy });
     }
     return out;
