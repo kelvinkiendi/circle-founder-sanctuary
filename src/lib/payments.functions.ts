@@ -95,8 +95,9 @@ async function darajaStkPush(args: {
 
 // Compute amount for a payment type given context
 export const computePaymentAmount = createServerFn({ method: "POST" })
-  .inputValidator((d: { payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
+  .inputValidator((d: { sessionId: string; payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
     z.object({
+      ...SessionField,
       payment_type: PaymentTypeEnum,
       base_amount: z.number().optional(),
       outside_area: z.boolean().optional(),
@@ -104,6 +105,7 @@ export const computePaymentAmount = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId);
     switch (data.payment_type) {
       case "enrollment_full": return { amount: ENROLL_FULL };
       case "enrollment_installment_1": return { amount: ENROLL_INSTALLMENT_1 };
