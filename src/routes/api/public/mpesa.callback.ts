@@ -10,6 +10,23 @@ export const Route = createFileRoute("/api/public/mpesa/callback")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          // Auth: require shared secret token (configure Daraja CallBackURL with ?token=<MPESA_CALLBACK_SECRET>)
+          const expected = process.env.MPESA_CALLBACK_SECRET;
+          if (!expected) {
+            console.error("mpesa callback: MPESA_CALLBACK_SECRET not configured");
+            return new Response("Server misconfigured", { status: 500 });
+          }
+          const url = new URL(request.url);
+          const provided =
+            url.searchParams.get("token") ??
+            request.headers.get("x-mpesa-secret") ??
+            (request.headers.get("authorization")?.toLowerCase().startsWith("bearer ")
+              ? request.headers.get("authorization")!.slice(7).trim()
+              : null);
+          if (!provided || provided !== expected) {
+            return new Response("Unauthorized", { status: 401 });
+          }
+
           const body = await request.json();
           const stk = body?.Body?.stkCallback;
           if (!stk) return new Response("ignored", { status: 200 });
@@ -18,6 +35,20 @@ export const Route = createFileRoute("/api/public/mpesa/callback")({
           const resultCode: number = stk.ResultCode;
           const items: any[] = stk.CallbackMetadata?.Item ?? [];
           const get = (n: string) => items.find((i) => i.Name === n)?.Value;
+
+          // Verify the CheckoutRequestID exists and is still pending before mutating
+          const { data: existing } = await supabaseAdmin
+            .from("payments")
+            .select("id, status")
+            .eq("mpesa_checkout_request_id", checkoutId)
+            .maybeSingle();
+          if (!existing) {
+            return new Response("Unknown CheckoutRequestID", { status: 404 });
+          }
+          if (existing.status !== "pending") {
+            // Already processed — ack to stop Daraja retries
+            return Response.json({ ResultCode: 0, ResultDesc: "Already processed" });
+          }
 
           if (resultCode === 0) {
             const receipt = String(get("MpesaReceiptNumber") ?? "");
