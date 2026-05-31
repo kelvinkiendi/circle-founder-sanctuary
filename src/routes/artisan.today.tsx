@@ -353,6 +353,7 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
       if (!ph) { toast.error("Invalid phone"); setBusy(false); return; }
       const res = await stk({
         data: {
+          sessionId: session?.sessionId,
           client_id: client.id,
           payment_type: "other",
           amount_ksh: total,
