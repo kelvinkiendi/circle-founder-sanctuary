@@ -100,7 +100,7 @@ async function darajaStkPush(args: {
 
 // Compute amount for a payment type given context
 export const computePaymentAmount = createServerFn({ method: "POST" })
-  .inputValidator((d: { sessionId?: string; payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
+  .inputValidator((d: { sessionId: string; payment_type: string; base_amount?: number; outside_area?: boolean; apply_founder_rate?: boolean }) =>
     z.object({
       ...SessionField,
       payment_type: PaymentTypeEnum,
@@ -347,6 +347,7 @@ export const runSuspensionSweep = createServerFn({ method: "POST" })
 // Record a cash payment (paid immediately, generates receipt + WA queue + line items)
 export const recordCashPayment = createServerFn({ method: "POST" })
   .inputValidator((d: {
+    sessionId: string;
     client_id: string;
     founder_id?: string | null;
     amount_ksh: number;
