@@ -327,6 +327,7 @@ function BillingSheet({ appt, techTag, onClose, onDone }: { appt: any | null; te
   const removeRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
 
   const submit = async () => {
+    if (!session) { toast.error("Please sign in again"); return; }
     if (!client) { toast.error("Pick a client"); return; }
     if (rows.length === 0) { toast.error("Add at least one service"); return; }
     if (total <= 0) { toast.error("Total must be > 0"); return; }
@@ -726,14 +727,14 @@ function Step2Service({
   const today = new Date().toISOString().slice(0, 10);
 
   // Load active services from catalog (admin-managed)
+  const { session } = useSession();
+  const fetchServices = useServerFn(getActiveServicesFn);
+  const fetchDayBusy = useServerFn(getArtisanAppointmentsFn);
+
   const { data: catalog = [] } = useQuery({
     queryKey: ["booking-services-catalog"],
-    queryFn: async () => {
-      const { data } = await (supabase as any).from("services")
-        .select("id, name, price_ksh, duration_minutes, category, status")
-        .eq("status", "active").order("display_order").order("name");
-      return data ?? [];
-    },
+    enabled: !!session?.sessionId,
+    queryFn: () => fetchServices({ data: { sessionId: session!.sessionId } }),
   });
 
   // Map a catalog service's category/name to the appointment_type enum
@@ -752,15 +753,8 @@ function Step2Service({
   // Existing appts for this tech on this date — to block overlapping slots
   const { data: dayAppts } = useQuery({
     queryKey: ["sched-day", techTag, date],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select("scheduled_time, duration_minutes, appointment_type")
-        .eq("created_by", techTag).eq("scheduled_date", date)
-        .neq("status", "cancelled");
-      return data ?? [];
-    },
-    enabled: !!date,
+    queryFn: () => fetchDayBusy({ data: { sessionId: session!.sessionId, techTag, today: date } }),
+    enabled: !!date && !!session?.sessionId,
   });
 
   const busyRanges = useMemo(() => (dayAppts ?? []).map((a: any) => {
