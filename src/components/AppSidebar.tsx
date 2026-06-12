@@ -1,5 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
-import { Users, LayoutDashboard, Smartphone, LogOut } from "lucide-react";
+import { Users, LayoutDashboard, Smartphone, LogOut, ShieldCheck } from "lucide-react";
 import { useSession } from "@/lib/session";
 import { NAV_BY_ROLE, ROLE_LABEL, type NavKey } from "@/lib/permissions";
 
@@ -39,6 +39,20 @@ export function AppSidebar() {
             </a>
           );
         })}
+        {session?.role === "admin" && (
+          <a
+            href="/admin/partners"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
+              isActive("/admin/partners")
+                ? "bg-sidebar-accent text-sidebar-primary font-medium"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span>Partners</span>
+            {isActive("/admin/partners") && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sidebar-primary" />}
+          </a>
+        )}
       </nav>
       {session && (
         <div className="px-3 py-3 border-t border-sidebar-border space-y-2">
