@@ -1,4 +1,4 @@
-export type StaffRole = "admin" | "manager" | "technician" | "reception" | "guardian";
+export type StaffRole = "admin" | "manager" | "technician" | "reception" | "guardian" | "partner";
 
 export const ROLE_LABEL: Record<StaffRole, string> = {
   admin: "The Sanctuary",
@@ -6,6 +6,7 @@ export const ROLE_LABEL: Record<StaffRole, string> = {
   technician: "The Artisan",
   reception: "The Concierge",
   guardian: "The Guardian",
+  partner: "The Partner",
 };
 
 // Only 3 portals remain; admin/manager land at the concierge desk by default.
@@ -15,10 +16,11 @@ export const PORTAL_PATH: Record<StaffRole, string> = {
   technician: "/artisan/today",
   reception: "/concierge/desk",
   guardian: "/guardian/view",
+  partner: "/guardian/view",
 };
 
 export const INACTIVITY_MINUTES: Record<StaffRole, number> = {
-  admin: 60, manager: 30, technician: 15, reception: 30, guardian: 30,
+  admin: 60, manager: 30, technician: 15, reception: 30, guardian: 30, partner: 30,
 };
 
 export const ONBOARDING_TIP: Record<StaffRole, string> = {
@@ -27,6 +29,7 @@ export const ONBOARDING_TIP: Record<StaffRole, string> = {
   technician: "Welcome, Artisan. Tap an appointment to begin. Swipe right to check in.",
   reception: "Welcome, Concierge. Search clients to book or check them in.",
   guardian: "Welcome, Guardian. All data is view-only. Use the Export Center for reports.",
+  partner: "Welcome, Partner. You have view-only access to reports and audits.",
 };
 
 export type NavKey = "checkin" | "reports" | "tech";
@@ -37,6 +40,7 @@ export const NAV_BY_ROLE: Record<StaffRole, NavKey[]> = {
   technician: ["tech"],
   reception: ["checkin"],
   guardian: ["reports"],
+  partner: ["reports"],
 };
 
 export const CAN = {
@@ -45,7 +49,7 @@ export const CAN = {
   approveGelRescue: (r: StaffRole) => r === "admin" || r === "manager",
   enrollFounder: (r: StaffRole) => r === "admin",
   refund: (r: StaffRole) => r === "admin",
-  export: (r: StaffRole) => r === "admin" || r === "guardian",
+  export: (r: StaffRole) => r === "admin" || r === "guardian" || r === "partner",
   changeSettings: (r: StaffRole) => r === "admin",
   rescheduleAppt: (r: StaffRole) => r === "admin" || r === "manager",
   switchPortal: (r: StaffRole) => r === "admin",

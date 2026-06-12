@@ -8,7 +8,7 @@ import { PaymentsPage } from "@/_archive/routes/payments";
 
 export const Route = createFileRoute("/guardian/view")({
   component: () => (
-    <RequireRole roles={["guardian", "admin", "manager"]}>
+    <RequireRole roles={["guardian", "admin", "manager", "partner"]}>
       <Layout><GuardianShell /></Layout>
     </RequireRole>
   ),
