@@ -1144,7 +1144,13 @@ export type Database = {
         | "gloves"
         | "magnetic_clasp"
       product_launch: "prelaunch" | "public"
-      staff_role: "admin" | "manager" | "technician" | "reception" | "guardian"
+      staff_role:
+        | "admin"
+        | "manager"
+        | "technician"
+        | "reception"
+        | "guardian"
+        | "partner"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1325,7 +1331,14 @@ export const Constants = {
         "magnetic_clasp",
       ],
       product_launch: ["prelaunch", "public"],
-      staff_role: ["admin", "manager", "technician", "reception", "guardian"],
+      staff_role: [
+        "admin",
+        "manager",
+        "technician",
+        "reception",
+        "guardian",
+        "partner",
+      ],
     },
   },
 } as const
