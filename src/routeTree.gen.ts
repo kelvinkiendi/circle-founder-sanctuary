@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as GuardianViewRouteImport } from './routes/guardian.view'
 import { Route as ConciergeDeskRouteImport } from './routes/concierge.desk'
 import { Route as ArtisanTodayRouteImport } from './routes/artisan.today'
+import { Route as AdminPartnersRouteImport } from './routes/admin.partners'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa.callback'
 import { Route as ApiPublicHooksVisitReminders21dRouteImport } from './routes/api/public/hooks/visit-reminders-21d'
 
@@ -42,6 +43,11 @@ const ArtisanTodayRoute = ArtisanTodayRouteImport.update({
   path: '/artisan/today',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPartnersRoute = AdminPartnersRouteImport.update({
+  id: '/admin/partners',
+  path: '/admin/partners',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
   id: '/api/public/mpesa/callback',
   path: '/api/public/mpesa/callback',
@@ -57,6 +63,7 @@ const ApiPublicHooksVisitReminders21dRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/change-pin': typeof ChangePinRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/change-pin': typeof ChangePinRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/change-pin': typeof ChangePinRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/artisan/today': typeof ArtisanTodayRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/change-pin'
+    | '/admin/partners'
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/change-pin'
+    | '/admin/partners'
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/change-pin'
+    | '/admin/partners'
     | '/artisan/today'
     | '/concierge/desk'
     | '/guardian/view'
@@ -115,6 +127,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChangePinRoute: typeof ChangePinRoute
+  AdminPartnersRoute: typeof AdminPartnersRoute
   ArtisanTodayRoute: typeof ArtisanTodayRoute
   ConciergeDeskRoute: typeof ConciergeDeskRoute
   GuardianViewRoute: typeof GuardianViewRoute
@@ -159,6 +172,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ArtisanTodayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/partners': {
+      id: '/admin/partners'
+      path: '/admin/partners'
+      fullPath: '/admin/partners'
+      preLoaderRoute: typeof AdminPartnersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mpesa/callback': {
       id: '/api/public/mpesa/callback'
       path: '/api/public/mpesa/callback'
@@ -179,6 +199,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChangePinRoute: ChangePinRoute,
+  AdminPartnersRoute: AdminPartnersRoute,
   ArtisanTodayRoute: ArtisanTodayRoute,
   ConciergeDeskRoute: ConciergeDeskRoute,
   GuardianViewRoute: GuardianViewRoute,
@@ -188,3 +209,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
