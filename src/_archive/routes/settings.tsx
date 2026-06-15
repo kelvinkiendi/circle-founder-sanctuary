@@ -18,6 +18,8 @@ import {
   Activity,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/session";
+import { getSettingFn, saveSettingFn } from "@/lib/app-settings.functions";
 import { Layout, PageHeader } from "@/components/Layout";
 import { ServiceAreaMap } from "@/components/ServiceAreaMap";
 import { Button } from "@/components/ui/button";
@@ -39,24 +41,20 @@ import {
 // ---------- Helpers ----------
 function useSetting<T = any>(key: string) {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const query = useQuery({
-    queryKey: ["app_settings", key],
+    queryKey: ["app_settings", key, sessionId],
+    enabled: !!sessionId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", key)
-        .maybeSingle();
-      if (error) throw error;
-      return (data?.value ?? {}) as T;
+      const res = await getSettingFn({ data: { sessionId: sessionId!, key } });
+      return (res?.value ?? {}) as T;
     },
   });
   const save = useMutation({
     mutationFn: async (value: T) => {
-      const { error } = await supabase
-        .from("app_settings")
-        .upsert({ key, value: value as any, updated_at: new Date().toISOString() });
-      if (error) throw error;
+      if (!sessionId) throw new Error("Not signed in");
+      await saveSettingFn({ data: { sessionId, key, value: value as any } });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["app_settings", key] });
