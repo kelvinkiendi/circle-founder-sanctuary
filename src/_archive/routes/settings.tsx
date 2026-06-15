@@ -18,6 +18,8 @@ import {
   Activity,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/session";
+import { getSettingFn, saveSettingFn } from "@/lib/app-settings.functions";
 import { Layout, PageHeader } from "@/components/Layout";
 import { ServiceAreaMap } from "@/components/ServiceAreaMap";
 import { Button } from "@/components/ui/button";
