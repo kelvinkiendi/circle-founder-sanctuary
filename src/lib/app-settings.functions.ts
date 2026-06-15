@@ -16,7 +16,7 @@ export const getSettingFn = createServerFn({ method: "POST" })
       .eq("key", data.key)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return (row?.value ?? {}) as Record<string, unknown>;
+    return { value: (row?.value ?? {}) as any };
   });
 
 /** Admin-only writes. */
