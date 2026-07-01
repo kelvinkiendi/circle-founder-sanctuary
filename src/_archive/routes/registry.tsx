@@ -487,13 +487,9 @@ function QuickAddModal({
             <button
               type="button"
               onClick={async () => {
+                if (!session?.sessionId) return toast.error("Session missing");
                 try {
-                  const { sendReminderNowFn } = await import("@/lib/portal.functions");
-                  const { useSession } = await import("@/lib/session");
-                  void useSession;
-                  const sid = (window as any).__coterie_session?.sessionId;
-                  if (!sid) throw new Error("Session missing");
-                  await sendReminderNowFn({ data: { sessionId: sid, clientId: client.id } });
+                  await sendReminder({ data: { sessionId: session.sessionId, clientId: client.id } });
                   toast.success("Reminder queued");
                 } catch (e: any) { toast.error(e?.message ?? "Failed"); }
               }}
