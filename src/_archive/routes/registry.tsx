@@ -451,7 +451,7 @@ function QuickAddModal({
                 </div>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Predicted Next Visit · auto +21d</div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Predicted Next Visit</div>
                 <div className="text-sm font-medium mt-1 text-primary">
                   {client.next_visit_predicted_date
                     ? new Date(client.next_visit_predicted_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
@@ -461,6 +461,40 @@ function QuickAddModal({
             </div>
           </Field>
         )}
+        {client && (
+          <Field label="Reminder cadence (days)" span={2}>
+            <input
+              type="number" min={1} max={365}
+              value={(form as any).reminder_interval_days ?? ""}
+              onChange={(e) => setForm({ ...form, reminder_interval_days: e.target.value ? Number(e.target.value) : null } as any)}
+              placeholder="Leave blank to use global default"
+              className="w-full bg-transparent border-b border-border py-2 text-sm outline-none focus:border-primary"
+            />
+            <div className="text-[10px] text-muted-foreground mt-1">Overrides the global reminder interval for this client.</div>
+          </Field>
+        )}
+        {client && (
+          <Field label="" span={2}>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const { sendReminderNowFn } = await import("@/lib/portal.functions");
+                  const { useSession } = await import("@/lib/session");
+                  void useSession;
+                  const sid = (window as any).__coterie_session?.sessionId;
+                  if (!sid) throw new Error("Session missing");
+                  await sendReminderNowFn({ data: { sessionId: sid, clientId: client.id } });
+                  toast.success("Reminder queued");
+                } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+              }}
+              className="text-xs uppercase tracking-[0.2em] px-4 py-2 border border-gold/40 text-gold rounded-md hover:bg-gold/10"
+            >
+              Send Reminder Now
+            </button>
+          </Field>
+        )}
+
       </div>
       <div className="flex justify-end gap-2 mt-6">
         <button onClick={onClose} className="text-xs uppercase tracking-[0.2em] px-4 py-2.5 border border-border rounded-md">Cancel</button>
