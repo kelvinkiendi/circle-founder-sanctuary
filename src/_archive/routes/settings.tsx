@@ -460,6 +460,8 @@ function StaffTab() {
                 <SelectItem value="manager">Manager — reports + settings</SelectItem>
                 <SelectItem value="technician">Technician — mobile view</SelectItem>
                 <SelectItem value="reception">Reception — booking only</SelectItem>
+                <SelectItem value="guardian">Guardian — view-only audit</SelectItem>
+                <SelectItem value="partner">Partner — view-only reports</SelectItem>
               </SelectContent>
             </Select>
           </Field>
