@@ -278,7 +278,9 @@ async function upgradeToFounder(c: ClientRow) {
 function QuickAddModal({
   client, onClose, onSaved,
 }: { client: ClientRow | null; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({
+  const { session } = useSession();
+  const sendReminder = useServerFn(sendReminderNowFn);
+  const [form, setForm] = useState<any>({
     full_name: client?.full_name ?? "",
     phone: client?.phone ?? "",
     whatsapp_number: client?.whatsapp_number ?? "",
@@ -291,10 +293,12 @@ function QuickAddModal({
     notes: client?.notes ?? "",
     first_visit_date: client?.first_visit_date ?? new Date().toISOString().slice(0, 10),
     avatar_url: client?.avatar_url ?? "",
+    reminder_interval_days: (client as any)?.reminder_interval_days ?? null,
   });
   const [whatsappSame, setWhatsappSame] = useState(!client?.whatsapp_number || client?.whatsapp_number === client?.phone);
   const [sendWelcomeOpt, setSendWelcomeOpt] = useState(!client);
   const [referrerQ, setReferrerQ] = useState("");
+
 
   const { data: referrers } = useQuery({
     queryKey: ["referrer-search", referrerQ],
