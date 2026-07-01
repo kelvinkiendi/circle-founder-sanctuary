@@ -38,6 +38,12 @@ export const Route = createFileRoute("/api/public/hooks/visit-reminders-21d")({
         let queued = 0;
         const skipped: string[] = [];
 
+        // Load configurable template (if any)
+        const { data: settingRow } = await supabaseAdmin
+          .from("app_settings").select("value").eq("key", "visit_reminder").maybeSingle();
+        const tpl = ((settingRow?.value as any)?.template as string | undefined)
+          ?? "Hi {first_name} ✨ It's been 3 weeks since your last sanctuary visit ({last_date}). Your nails are likely ready for a refresh — reply to book your next session at COTERIE. — COTERIE 💅";
+
         for (const c of clients ?? []) {
           const wa = c.whatsapp_number || c.phone;
           if (!wa) { skipped.push(c.id); continue; }
@@ -55,7 +61,8 @@ export const Route = createFileRoute("/api/public/hooks/visit-reminders-21d")({
           const lastDate = c.last_appointment_date
             ? new Date(c.last_appointment_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
             : "your last visit";
-          const body = `Hi ${firstName} ✨ It's been 3 weeks since your last sanctuary visit (${lastDate}). Your nails are likely ready for a refresh — reply to book your next session at COTERIE. — COTERIE 💅`;
+          const body = tpl.replace(/\{first_name\}/g, firstName).replace(/\{last_date\}/g, lastDate);
+
 
           await supabaseAdmin.from("whatsapp_messages").insert({
             client_id: c.id,

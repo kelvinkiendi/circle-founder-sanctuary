@@ -76,11 +76,15 @@ export const searchClientsFn = createServerFn({ method: "POST" })
     limit: z.number().int().min(1).max(50).default(15),
   }).parse(i))
   .handler(async ({ data }) => {
-    await requireStaff(data.sessionId);
+    const staff = await requireStaff(data.sessionId);
     const cols = data.fields === "full"
-      ? "id, full_name, phone, whatsapp_number, client_type, notes"
+      ? "id, full_name, phone, whatsapp_number, client_type, notes, created_by, last_appointment_date, next_visit_predicted_date, reminder_interval_days, whatsapp_opt_out"
       : "id, full_name, phone, whatsapp_number, client_type";
     let qb = supabaseAdmin.from("clients").select(cols).limit(data.limit);
+    // Technicians only see clients they added
+    if (staff.role === "technician") {
+      qb = qb.eq("created_by", `tech:${staff.staff_id}`);
+    }
     if (data.q?.trim()) {
       const q = data.q.replace(/[%,]/g, "");
       qb = qb.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%`);
@@ -92,16 +96,22 @@ export const searchClientsFn = createServerFn({ method: "POST" })
 export const getClientByIdFn = createServerFn({ method: "POST" })
   .inputValidator((i) => Session.extend({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data }) => {
-    await requireStaff(data.sessionId);
+    const staff = await requireStaff(data.sessionId);
     const { data: row } = await supabaseAdmin.from("clients").select("*").eq("id", data.id).maybeSingle();
+    if (!row) return null;
+    if (staff.role === "technician" && row.created_by !== `tech:${staff.staff_id}`) {
+      throw new Error("Forbidden");
+    }
     return row;
   });
 
 export const getFirstClientIdFn = createServerFn({ method: "POST" })
   .inputValidator((i) => Session.parse(i))
   .handler(async ({ data }) => {
-    await requireStaff(data.sessionId);
-    const { data: row } = await supabaseAdmin.from("clients").select("id").limit(1).maybeSingle();
+    const staff = await requireStaff(data.sessionId);
+    let qb = supabaseAdmin.from("clients").select("id").limit(1);
+    if (staff.role === "technician") qb = qb.eq("created_by", `tech:${staff.staff_id}`);
+    const { data: row } = await qb.maybeSingle();
     return row;
   });
 
@@ -111,19 +121,86 @@ export const createClientFn = createServerFn({ method: "POST" })
     phone: z.string().min(6).max(40),
     whatsapp_number: z.string().min(6).max(40).optional(),
     notes: z.string().max(500).optional(),
+    reminder_interval_days: z.number().int().min(1).max(365).optional(),
   }).parse(i))
   .handler(async ({ data }) => {
-    await requireStaff(data.sessionId);
+    const staff = await requireStaff(data.sessionId);
+    const createdBy = `${staff.role === "reception" ? "reception" : staff.role === "technician" ? "tech" : staff.role}:${staff.staff_id}`;
     const { data: row, error } = await supabaseAdmin.from("clients").insert({
       full_name: data.full_name,
       phone: data.phone,
       whatsapp_number: data.whatsapp_number ?? data.phone,
       client_type: "regular",
       notes: data.notes ?? null,
+      created_by: createdBy,
+      reminder_interval_days: data.reminder_interval_days ?? null,
     }).select().single();
     if (error) throw new Error(error.message);
     return row;
   });
+
+export const updateClientReminderFn = createServerFn({ method: "POST" })
+  .inputValidator((i) => Session.extend({
+    clientId: z.string().uuid(),
+    days: z.number().int().min(1).max(365).nullable(),
+  }).parse(i))
+  .handler(async ({ data }) => {
+    const staff = await requireStaff(data.sessionId, ["admin", "manager", "reception"]);
+    void staff;
+    const { error } = await supabaseAdmin
+      .from("clients").update({ reminder_interval_days: data.days }).eq("id", data.clientId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const sendReminderNowFn = createServerFn({ method: "POST" })
+  .inputValidator((i) => Session.extend({ clientId: z.string().uuid() }).parse(i))
+  .handler(async ({ data }) => {
+    const staff = await requireStaff(data.sessionId, ["admin", "manager", "reception"]);
+    const { data: c } = await supabaseAdmin
+      .from("clients")
+      .select("id, full_name, whatsapp_number, phone, last_appointment_date, whatsapp_opt_out")
+      .eq("id", data.clientId).maybeSingle();
+    if (!c) throw new Error("Client not found");
+    if (c.whatsapp_opt_out) throw new Error("Client has opted out of WhatsApp");
+    const { data: settingRow } = await supabaseAdmin
+      .from("app_settings").select("value").eq("key", "visit_reminder").maybeSingle();
+    const tpl = ((settingRow?.value as any)?.template as string | undefined)
+      ?? "Hi {first_name} ✨ It's been a while since your last visit ({last_date}). Your nails are ready for a refresh — reply to book at COTERIE. 💅";
+    const firstName = (c.full_name ?? "there").split(" ")[0];
+    const lastDate = c.last_appointment_date
+      ? new Date(c.last_appointment_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+      : "your last visit";
+    const body = tpl.replace(/\{first_name\}/g, firstName).replace(/\{last_date\}/g, lastDate);
+    const { error } = await supabaseAdmin.from("whatsapp_messages").insert({
+      client_id: c.id,
+      template_key: "visit_reminder_21d",
+      body,
+      status: "queued",
+      created_by: `staff:${staff.staff_id}`,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listReminderHistoryFn = createServerFn({ method: "POST" })
+  .inputValidator((i) => Session.extend({
+    clientId: z.string().uuid().optional(),
+    limit: z.number().int().min(1).max(100).default(25),
+  }).parse(i))
+  .handler(async ({ data }) => {
+    await requireStaff(data.sessionId);
+    let qb = supabaseAdmin
+      .from("whatsapp_messages")
+      .select("id, client_id, body, status, sent_at, created_by, clients(full_name)")
+      .eq("template_key", "visit_reminder_21d")
+      .order("sent_at", { ascending: false })
+      .limit(data.limit);
+    if (data.clientId) qb = qb.eq("client_id", data.clientId);
+    const { data: rows } = await qb;
+    return rows ?? [];
+  });
+
 
 export const setClientOptOutFn = createServerFn({ method: "POST" })
   .inputValidator((i) => Session.extend({

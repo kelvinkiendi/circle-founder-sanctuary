@@ -1,10 +1,13 @@
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { WHATSAPP_TEMPLATES } from "@/lib/whatsapp-templates";
 import { normalizeKePhone } from "@/lib/phone";
+import { sendReminderNowFn } from "@/lib/portal.functions";
 import { toast } from "sonner";
+
 import { PageHeader } from "@/components/Layout";
 import {
   UserPlus, Upload, Search, Download, X, Loader2, CheckCircle2,
@@ -275,7 +278,9 @@ async function upgradeToFounder(c: ClientRow) {
 function QuickAddModal({
   client, onClose, onSaved,
 }: { client: ClientRow | null; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({
+  const { session } = useSession();
+  const sendReminder = useServerFn(sendReminderNowFn);
+  const [form, setForm] = useState<any>({
     full_name: client?.full_name ?? "",
     phone: client?.phone ?? "",
     whatsapp_number: client?.whatsapp_number ?? "",
@@ -288,10 +293,12 @@ function QuickAddModal({
     notes: client?.notes ?? "",
     first_visit_date: client?.first_visit_date ?? new Date().toISOString().slice(0, 10),
     avatar_url: client?.avatar_url ?? "",
+    reminder_interval_days: (client as any)?.reminder_interval_days ?? null,
   });
   const [whatsappSame, setWhatsappSame] = useState(!client?.whatsapp_number || client?.whatsapp_number === client?.phone);
   const [sendWelcomeOpt, setSendWelcomeOpt] = useState(!client);
   const [referrerQ, setReferrerQ] = useState("");
+
 
   const { data: referrers } = useQuery({
     queryKey: ["referrer-search", referrerQ],
@@ -324,7 +331,9 @@ function QuickAddModal({
         notes: form.notes || null,
         first_visit_date: form.first_visit_date || null,
         avatar_url: form.avatar_url || null,
+        reminder_interval_days: form.reminder_interval_days ?? null,
       };
+
 
       let clientId = client?.id;
       if (client) {
@@ -451,7 +460,7 @@ function QuickAddModal({
                 </div>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Predicted Next Visit · auto +21d</div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Predicted Next Visit</div>
                 <div className="text-sm font-medium mt-1 text-primary">
                   {client.next_visit_predicted_date
                     ? new Date(client.next_visit_predicted_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
@@ -461,6 +470,36 @@ function QuickAddModal({
             </div>
           </Field>
         )}
+        {client && (
+          <Field label="Reminder cadence (days)" span={2}>
+            <input
+              type="number" min={1} max={365}
+              value={(form as any).reminder_interval_days ?? ""}
+              onChange={(e) => setForm({ ...form, reminder_interval_days: e.target.value ? Number(e.target.value) : null } as any)}
+              placeholder="Leave blank to use global default"
+              className="w-full bg-transparent border-b border-border py-2 text-sm outline-none focus:border-primary"
+            />
+            <div className="text-[10px] text-muted-foreground mt-1">Overrides the global reminder interval for this client.</div>
+          </Field>
+        )}
+        {client && (
+          <Field label="" span={2}>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!session?.sessionId) return toast.error("Session missing");
+                try {
+                  await sendReminder({ data: { sessionId: session.sessionId, clientId: client.id } });
+                  toast.success("Reminder queued");
+                } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+              }}
+              className="text-xs uppercase tracking-[0.2em] px-4 py-2 border border-gold/40 text-gold rounded-md hover:bg-gold/10"
+            >
+              Send Reminder Now
+            </button>
+          </Field>
+        )}
+
       </div>
       <div className="flex justify-end gap-2 mt-6">
         <button onClick={onClose} className="text-xs uppercase tracking-[0.2em] px-4 py-2.5 border border-border rounded-md">Cancel</button>

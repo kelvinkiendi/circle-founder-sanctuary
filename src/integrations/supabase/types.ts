@@ -173,6 +173,7 @@ export type Database = {
           birthday: string | null
           client_type: Database["public"]["Enums"]["client_type"]
           created_at: string
+          created_by: string | null
           email: string | null
           first_visit_date: string | null
           full_name: string
@@ -183,6 +184,7 @@ export type Database = {
           phone: string | null
           referral_source: string | null
           referrer_id: string | null
+          reminder_interval_days: number | null
           service_area: string | null
           status: Database["public"]["Enums"]["client_status"]
           whatsapp_number: string | null
@@ -194,6 +196,7 @@ export type Database = {
           birthday?: string | null
           client_type?: Database["public"]["Enums"]["client_type"]
           created_at?: string
+          created_by?: string | null
           email?: string | null
           first_visit_date?: string | null
           full_name: string
@@ -204,6 +207,7 @@ export type Database = {
           phone?: string | null
           referral_source?: string | null
           referrer_id?: string | null
+          reminder_interval_days?: number | null
           service_area?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           whatsapp_number?: string | null
@@ -215,6 +219,7 @@ export type Database = {
           birthday?: string | null
           client_type?: Database["public"]["Enums"]["client_type"]
           created_at?: string
+          created_by?: string | null
           email?: string | null
           first_visit_date?: string | null
           full_name?: string
@@ -225,6 +230,7 @@ export type Database = {
           phone?: string | null
           referral_source?: string | null
           referrer_id?: string | null
+          reminder_interval_days?: number | null
           service_area?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           whatsapp_number?: string | null
