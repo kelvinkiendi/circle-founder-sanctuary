@@ -331,7 +331,9 @@ function QuickAddModal({
         notes: form.notes || null,
         first_visit_date: form.first_visit_date || null,
         avatar_url: form.avatar_url || null,
+        reminder_interval_days: form.reminder_interval_days ?? null,
       };
+
 
       let clientId = client?.id;
       if (client) {
