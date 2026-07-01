@@ -150,8 +150,6 @@ export const updateClientReminderFn = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin
       .from("clients").update({ reminder_interval_days: data.days }).eq("id", data.clientId);
     if (error) throw new Error(error.message);
-    // Nudge next_visit_predicted_date recompute by touching last appt (if any)
-    await supabaseAdmin.rpc("noop").catch(() => {});
     return { ok: true };
   });
 
