@@ -613,28 +613,27 @@ function BulkImport({ onDone }: { onDone: () => void }) {
       const insertPayload = valid.map(toRow);
       let inserted: any[] = [];
       if (insertPayload.length) {
-        const { data, error } = await supabase.from("clients").insert(insertPayload).select("id, client_type");
-        if (error) throw error;
-        inserted = data ?? [];
+        if (!sessionId) throw new Error("Not signed in");
+        inserted = (await bulkInsertClientsFn({ data: { sessionId, rows: insertPayload as any } })) as any[];
       }
 
       // Optionally update duplicates by phone
       let updatedCount = 0;
-      if (dupMode === "update" && dups.length) {
+      if (dupMode === "update" && dups.length && sessionId) {
         for (const r of dups) {
-          const patch = toRow(r);
-          const { error } = await supabase.from("clients").update(patch).eq("phone", r.phone);
-          if (!error) updatedCount += 1;
+          try {
+            await bulkUpdateClientByPhoneFn({ data: { sessionId, phone: r.phone, patch: toRow(r) as any } });
+            updatedCount += 1;
+          } catch {}
         }
       }
 
       // Add prospects to waitlist
       const prospects = inserted.filter((d: any) => d.client_type === "prospect");
-      if (prospects.length) {
-        await supabase.from("founder_waitlist").insert(
-          prospects.map((p: any) => ({ client_id: p.id, priority_score: 10 })),
-        );
+      if (prospects.length && sessionId) {
+        await insertFounderWaitlistBulkFn({ data: { sessionId, clientIds: prospects.map((p: any) => p.id) } });
       }
+
 
       setResult({
         added: insertPayload.length,
