@@ -188,7 +188,7 @@ export function Registry() {
                       className="text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 border border-border rounded-md hover:bg-muted flex items-center gap-1">
                       <History className="h-3 w-3" /> History
                     </button>
-                    <button onClick={() => sendWelcome(c)} title="Send welcome WhatsApp"
+                    <button onClick={() => sessionId && sendWelcome(c, sessionId)} title="Send welcome WhatsApp"
                       className="text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 border border-border rounded-md hover:bg-muted flex items-center gap-1">
                       <MessageSquare className="h-3 w-3" /> WhatsApp
                     </button>
