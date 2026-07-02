@@ -372,35 +372,29 @@ function RulesTab() {
 // ---------- STAFF ----------
 function StaffTab() {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const { data: staff = [] } = useQuery({
-    queryKey: ["staff"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("staff").select("*").order("created_at");
-      if (error) throw error;
-      return data;
-    },
+    queryKey: ["staff", sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => await listStaffFn({ data: { sessionId: sessionId! } }),
   });
   const [form, setForm] = useState({ full_name: "", role: "technician", pin: "", email: "", phone: "" });
 
   const add = useMutation({
     mutationFn: async () => {
+      if (!sessionId) throw new Error("Not signed in");
       if (!form.full_name) throw new Error("Name required");
       if (form.pin && !/^\d{4}$/.test(form.pin)) throw new Error("PIN must be 4 digits");
-      // Insert staff WITHOUT the plain pin column — we hash it via RPC below
-      const { data: created, error } = await supabase
-        .from("staff")
-        .insert({
-          full_name: form.full_name,
-          role: form.role as any,
-          email: form.email || null,
-          phone: form.phone || null,
-        } as any)
-        .select("id")
-        .single();
-      if (error) throw error;
+      const created = await createStaffFn({ data: {
+        sessionId,
+        full_name: form.full_name,
+        role: form.role as any,
+        email: form.email || "",
+        phone: form.phone || "",
+      } });
       if (form.pin) {
-        const { setStaffPinFn } = await import("@/lib/auth.functions");
-        const res = await setStaffPinFn({ data: { staffId: created.id, pin: form.pin } });
+        const res = await setStaffPinFn({ data: { sessionId, staffId: created.id, pin: form.pin } });
         if (!res.ok) throw new Error("Failed to set PIN");
       }
     },
@@ -414,28 +408,30 @@ function StaffTab() {
 
   const toggle = useMutation({
     mutationFn: async ({ id, active }: any) => {
-      const { error } = await supabase.from("staff").update({ active }).eq("id", id);
-      if (error) throw error;
+      if (!sessionId) throw new Error("Not signed in");
+      await setStaffActiveFn({ data: { sessionId, staffId: id, active } });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff"] }),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("staff").delete().eq("id", id);
-      if (error) throw error;
+      if (!sessionId) throw new Error("Not signed in");
+      await deleteStaffFn({ data: { sessionId, staffId: id } });
     },
     onSuccess: () => {
       toast.success("Removed");
       qc.invalidateQueries({ queryKey: ["staff"] });
     },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const setPin = useMutation({
     mutationFn: async ({ id, pin }: { id: string; pin: string }) => {
+      if (!sessionId) throw new Error("Not signed in");
       if (!/^\d{4}$/.test(pin)) throw new Error("PIN must be 4 digits");
-      const { setStaffPinFn } = await import("@/lib/auth.functions");
-      const res = await setStaffPinFn({ data: { staffId: id, pin } });
+      const res = await setStaffPinFn({ data: { sessionId, staffId: id, pin } });
       if (!res.ok) throw new Error("Failed to set PIN");
     },
     onSuccess: () => {
