@@ -238,23 +238,19 @@ function Avatar({ name, url }: { name: string; url: string | null }) {
   );
 }
 
-async function sendWelcome(c: ClientRow) {
+async function sendWelcome(c: ClientRow, sessionId: string) {
   if (!c.whatsapp_number && !c.phone) {
     toast.error("No WhatsApp number on file.");
     return;
   }
-  const tmpl = WHATSAPP_TEMPLATES.find((t) => t.key === "just_because");
   const body = `Welcome to COTERIE Nail Sanctuary, ${c.full_name}. You're now in our circle. Book your next sanctuary session via WhatsApp or visit us at Shujaah Mall, Kilimani. — COTERIE`;
-  const { error } = await supabase.from("whatsapp_messages").insert({
-    client_id: c.id,
-    template_key: "welcome_onboard",
-    body,
-    status: "sent",
-  });
-  if (error) toast.error(error.message);
-  else toast.success(`Welcome message queued for ${c.full_name}`);
-  void tmpl;
+  try {
+    await queueWelcomeMessageFn({ data: { sessionId, clientId: c.id, body } });
+    toast.success(`Welcome message queued for ${c.full_name}`);
+  } catch (e: any) { toast.error(e.message); }
+  void WHATSAPP_TEMPLATES;
 }
+
 
 async function upgradeToFounder(c: ClientRow) {
   const ok = window.confirm(`Upgrade ${c.full_name} to Founder Circle? This opens enrollment.`);
