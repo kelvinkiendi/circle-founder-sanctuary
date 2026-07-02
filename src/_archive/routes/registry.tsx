@@ -754,6 +754,8 @@ function BulkImport({ onDone }: { onDone: () => void }) {
 
 function HistoryModal({ client, onClose }: { client: ClientRow; onClose: () => void }) {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const [form, setForm] = useState({
     appointment_type: "full_manicure",
     scheduled_date: new Date().toISOString().slice(0, 10),
@@ -763,29 +765,24 @@ function HistoryModal({ client, onClose }: { client: ClientRow; onClose: () => v
   });
 
   const { data: past } = useQuery({
-    queryKey: ["client-history", client.id],
-    queryFn: async () => {
-      const { data } = await supabase.from("appointments")
-        .select("id, appointment_type, scheduled_date, scheduled_time, status, notes")
-        .eq("client_id", client.id)
-        .order("scheduled_date", { ascending: false }).limit(20);
-      return data ?? [];
-    },
+    queryKey: ["client-history", client.id, sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => await listClientHistoryFn({ data: { sessionId: sessionId!, clientId: client.id } }),
   });
 
   const add = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("appointments").insert({
-        client_id: client.id,
-        appointment_type: form.appointment_type as any,
+      if (!sessionId) throw new Error("Not signed in");
+      await addPastAppointmentFn({ data: {
+        sessionId, clientId: client.id,
+        appointment_type: form.appointment_type,
         scheduled_date: form.scheduled_date,
         scheduled_time: form.scheduled_time,
         duration_minutes: form.duration_minutes,
-        status: "completed" as any,
         notes: form.notes || null,
-      });
-      if (error) throw error;
+      } });
     },
+
     onSuccess: () => {
       toast.success("Past appointment added");
       qc.invalidateQueries({ queryKey: ["client-history", client.id] });
