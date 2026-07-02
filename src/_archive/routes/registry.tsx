@@ -557,7 +557,9 @@ function BulkImport({ onDone }: { onDone: () => void }) {
 
     // Fetch existing phone numbers for dup check
     const { data: existingClients } = await supabase.from("clients").select("phone");
-    const existingPhones = new Set((existingClients ?? []).map((c: any) => c.phone).filter(Boolean));
+    if (!sessionId) { toast.error("Not signed in"); return; }
+    const phones = await getExistingPhonesFn({ data: { sessionId } }) as string[];
+    const existingPhones = new Set(phones);
     setExisting(existingPhones);
 
     const parsed: ParsedRow[] = lines.slice(1).map((ln) => {
