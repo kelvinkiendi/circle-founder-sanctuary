@@ -509,6 +509,8 @@ const TEMPLATE_HEADERS = [
 ];
 
 function BulkImport({ onDone }: { onDone: () => void }) {
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [existing, setExisting] = useState<Set<string>>(new Set());
