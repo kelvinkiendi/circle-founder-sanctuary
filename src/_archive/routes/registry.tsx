@@ -283,20 +283,20 @@ function QuickAddModal({
   const [whatsappSame, setWhatsappSame] = useState(!client?.whatsapp_number || client?.whatsapp_number === client?.phone);
   const [sendWelcomeOpt, setSendWelcomeOpt] = useState(!client);
   const [referrerQ, setReferrerQ] = useState("");
-
+  const sessionId = session?.sessionId;
 
   const { data: referrers } = useQuery({
-    queryKey: ["referrer-search", referrerQ],
+    queryKey: ["referrer-search", referrerQ, sessionId],
     queryFn: async () => {
-      if (!referrerQ.trim()) return [];
-      const { data } = await supabase.from("clients").select("id, full_name, phone").ilike("full_name", `%${referrerQ}%`).limit(5);
-      return data ?? [];
+      if (!referrerQ.trim() || !sessionId) return [];
+      return await searchClientsByNameFn({ data: { sessionId, q: referrerQ } });
     },
-    enabled: form.referral_source === "Referral",
+    enabled: form.referral_source === "Referral" && !!sessionId,
   });
 
   const save = useMutation({
     mutationFn: async () => {
+      if (!sessionId) throw new Error("Not signed in");
       if (!form.full_name.trim()) throw new Error("Name is required");
       const phone = normalizeKePhone(form.phone);
       if (!phone) throw new Error("Invalid phone (use +254… or 07xx…)");
@@ -305,8 +305,7 @@ function QuickAddModal({
 
       const payload: any = {
         full_name: form.full_name.trim(),
-        phone,
-        whatsapp_number: wa,
+        phone, whatsapp_number: wa,
         email: form.email || null,
         birthday: form.birthday || null,
         address: form.address || null,
@@ -319,31 +318,18 @@ function QuickAddModal({
         reminder_interval_days: form.reminder_interval_days ?? null,
       };
 
-
-      let clientId = client?.id;
-      if (client) {
-        const { error } = await supabase.from("clients").update(payload).eq("id", client.id);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase.from("clients").insert(payload).select("id").single();
-        if (error) throw error;
-        clientId = data.id;
-      }
+      const result = await upsertRegistryClientFn({ data: { sessionId, id: client?.id, payload } }) as any;
+      const clientId = result?.id ?? client?.id;
 
       if (form.client_type === "prospect" && clientId) {
-        await supabase.from("founder_waitlist").upsert(
-          { client_id: clientId, priority_score: 10, notes: form.notes || null },
-          { onConflict: "client_id" },
-        );
+        await upsertFounderWaitlistFn({ data: { sessionId, clientId, notes: form.notes || null } });
       }
 
       if (!client && sendWelcomeOpt && clientId && wa) {
-        await supabase.from("whatsapp_messages").insert({
-          client_id: clientId,
-          template_key: "welcome_onboard",
+        await queueWelcomeMessageFn({ data: {
+          sessionId, clientId,
           body: `Welcome to COTERIE Nail Sanctuary, ${form.full_name}. You're now in our circle. Book your next sanctuary session via WhatsApp or visit us at Shujaah Mall, Kilimani. — COTERIE`,
-          status: "sent",
-        });
+        } });
       }
     },
     onSuccess: () => {
@@ -353,6 +339,7 @@ function QuickAddModal({
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   return (
     <Modal onClose={onClose} title={client ? "Edit Client" : "New Client"}>
