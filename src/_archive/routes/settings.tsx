@@ -553,31 +553,17 @@ function StaffRow({ staff, roleClass, onToggle, onDelete, onSetPin }: {
 
 function CommissionEditor({ staffId }: { staffId: string }) {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const { data: current } = useQuery({
-    queryKey: ["commission-active", staffId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("staff_commission_settings")
-        .select("*")
-        .eq("staff_id", staffId)
-        .eq("is_active", true)
-        .order("effective_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
+    queryKey: ["commission-active", staffId, sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => await getActiveCommissionFn({ data: { sessionId: sessionId!, staffId } }),
   });
   const { data: history = [] } = useQuery({
-    queryKey: ["commission-history", staffId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("staff_commission_settings")
-        .select("id, commission_percentage, commission_type, fixed_amount_ksh, effective_date, notes, created_at")
-        .eq("staff_id", staffId)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data ?? [];
-    },
+    queryKey: ["commission-history", staffId, sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => await listCommissionHistoryFn({ data: { sessionId: sessionId!, staffId } }),
   });
 
   const [pct, setPct] = useState<string>("");
@@ -586,24 +572,21 @@ function CommissionEditor({ staffId }: { staffId: string }) {
   const [notes, setNotes] = useState<string>("");
 
   useEffect(() => {
-    setPct(String(current?.commission_percentage ?? 0));
-    setType((current?.commission_type as string) ?? "percentage_of_sale");
-    setFixed(String(current?.fixed_amount_ksh ?? 0));
+    setPct(String((current as any)?.commission_percentage ?? 0));
+    setType(((current as any)?.commission_type as string) ?? "percentage_of_sale");
+    setFixed(String((current as any)?.fixed_amount_ksh ?? 0));
   }, [current]);
 
   const save = useMutation({
     mutationFn: async () => {
-      // Deactivate prior settings, insert new active row
-      await supabase.from("staff_commission_settings").update({ is_active: false }).eq("staff_id", staffId).eq("is_active", true);
-      const { error } = await supabase.from("staff_commission_settings").insert({
-        staff_id: staffId,
+      if (!sessionId) throw new Error("Not signed in");
+      await saveCommissionFn({ data: {
+        sessionId, staffId,
         commission_percentage: Number(pct) || 0,
-        commission_type: type,
+        commission_type: type as any,
         fixed_amount_ksh: Number(fixed) || 0,
         notes: notes || null,
-        is_active: true,
-      } as any);
-      if (error) throw error;
+      } });
     },
     onSuccess: () => {
       toast.success("Commission rate updated");
@@ -613,6 +596,7 @@ function CommissionEditor({ staffId }: { staffId: string }) {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   return (
     <div className="px-3 pb-3 border-t bg-muted/30 space-y-3 pt-3">
