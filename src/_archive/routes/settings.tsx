@@ -721,15 +721,14 @@ function DataTab() {
   const { data, save } = useSetting<any>("data");
   const [d, setD] = useState<any>({});
   useEffect(() => { if (data) setD(data); }, [data]);
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
 
   const exportData = async (format: "json" | "csv") => {
+    if (!sessionId) return toast.error("Not signed in");
     toast.info("Preparing export…");
     const tables = ["clients", "founder_circle", "appointments", "perks_usage", "payments", "products", "founder_purchases"];
-    const out: Record<string, any[]> = {};
-    for (const t of tables) {
-      const { data } = await (supabase as any).from(t).select("*");
-      out[t] = data || [];
-    }
+    const out = await exportTablesFn({ data: { sessionId, tables } }) as Record<string, any[]>;
     if (format === "json") {
       const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
       downloadBlob(blob, `coterie-backup-${new Date().toISOString().slice(0, 10)}.json`);
@@ -750,6 +749,8 @@ function DataTab() {
   };
 
   const importCsv = async (file: File) => {
+    if (!sessionId) return toast.error("Not signed in");
+    const { bulkInsertClientsFn } = await import("@/lib/admin-registry.functions");
     const text = await file.text();
     const [header, ...rows] = text.trim().split("\n");
     const cols = header.split(",").map((s) => s.trim());
@@ -758,11 +759,14 @@ function DataTab() {
       const obj: any = {};
       cols.forEach((c, i) => (obj[c] = (parts[i] || "").trim()));
       return obj;
-    });
-    const { error } = await supabase.from("clients").insert(records as any);
-    if (error) toast.error(error.message);
-    else toast.success(`Imported ${records.length} clients`);
+    }).filter((r: any) => r.full_name && r.phone);
+    if (!records.length) return toast.error("No valid rows found");
+    try {
+      await bulkInsertClientsFn({ data: { sessionId, rows: records as any } });
+      toast.success(`Imported ${records.length} clients`);
+    } catch (e: any) { toast.error(e.message); }
   };
+
 
   return (
     <div className="space-y-6">
