@@ -1,11 +1,17 @@
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { WHATSAPP_TEMPLATES } from "@/lib/whatsapp-templates";
 import { normalizeKePhone } from "@/lib/phone";
 import { sendReminderNowFn } from "@/lib/portal.functions";
+import {
+  listRegistryClientsFn, getFounderMapFn, getLastVisitsFn,
+  searchClientsByNameFn, upsertRegistryClientFn, upsertFounderWaitlistFn,
+  queueWelcomeMessageFn, getExistingPhonesFn, bulkInsertClientsFn,
+  bulkUpdateClientByPhoneFn, insertFounderWaitlistBulkFn,
+  listClientHistoryFn, addPastAppointmentFn,
+} from "@/lib/admin-registry.functions";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Layout";
@@ -38,6 +44,7 @@ const REFERRAL_SOURCES = ["Instagram", "Referral", "Walk-in", "Google", "Friend"
 
 export function Registry() {
   const { session } = useSession();
+  const sessionId = session?.sessionId;
   const canBulkImport = session?.role === "admin" || session?.role === "manager";
   const canEnrollFounder = session?.role === "admin";
 
@@ -49,37 +56,21 @@ export function Registry() {
   const [historyFor, setHistoryFor] = useState<ClientRow | null>(null);
 
   const { data: clients, refetch } = useQuery({
-    queryKey: ["registry-clients", q, filter],
+    queryKey: ["registry-clients", sessionId, q, filter],
+    enabled: !!sessionId,
     queryFn: async () => {
-      let qb = supabase
-        .from("clients")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (q.trim()) {
-        qb = qb.or(
-          `full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%,email.ilike.%${q}%`,
-        );
-      }
-      if (filter === "regular") qb = qb.eq("client_type", "regular");
-      if (filter === "founder") qb = qb.eq("client_type", "founder");
-      if (filter === "prospect") qb = qb.eq("client_type", "prospect");
-      if (filter === "birthday") {
-        const m = String(new Date().getMonth() + 1).padStart(2, "0");
-        qb = qb.like("birthday", `____-${m}-__`);
-      }
-      const { data, error } = await qb;
-      if (error) throw error;
-      return (data ?? []) as ClientRow[];
+      const rows = await listRegistryClientsFn({ data: { sessionId: sessionId!, q, filter } });
+      return (rows ?? []) as ClientRow[];
     },
   });
 
   const { data: founderMap } = useQuery({
-    queryKey: ["registry-founder-map"],
+    queryKey: ["registry-founder-map", sessionId],
+    enabled: !!sessionId,
     queryFn: async () => {
-      const { data } = await supabase.from("founder_circle").select("client_id, founder_number, status");
+      const rows = await getFounderMapFn({ data: { sessionId: sessionId! } });
       const m: Record<string, { number: number | null; status: string }> = {};
-      (data ?? []).forEach((r: any) => {
+      (rows ?? []).forEach((r: any) => {
         m[r.client_id] = { number: r.founder_number, status: r.status };
       });
       return m;
@@ -87,15 +78,12 @@ export function Registry() {
   });
 
   const { data: lastVisits } = useQuery({
-    queryKey: ["registry-last-visits"],
+    queryKey: ["registry-last-visits", sessionId],
+    enabled: !!sessionId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select("client_id, scheduled_date")
-        .order("scheduled_date", { ascending: false })
-        .limit(500);
+      const rows = await getLastVisitsFn({ data: { sessionId: sessionId! } });
       const m: Record<string, string> = {};
-      (data ?? []).forEach((r: any) => {
+      (rows ?? []).forEach((r: any) => {
         if (!m[r.client_id]) m[r.client_id] = r.scheduled_date;
       });
       return m;
@@ -105,6 +93,7 @@ export function Registry() {
   return (
     <>
       <PageHeader
+
         eyebrow="The Registry · Client Onboarding"
         title="Welcome every soul into the sanctuary."
         description="Quick add, bulk import, and manage every client in COTERIE's circle."
@@ -199,7 +188,7 @@ export function Registry() {
                       className="text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 border border-border rounded-md hover:bg-muted flex items-center gap-1">
                       <History className="h-3 w-3" /> History
                     </button>
-                    <button onClick={() => sendWelcome(c)} title="Send welcome WhatsApp"
+                    <button onClick={() => sessionId && sendWelcome(c, sessionId)} title="Send welcome WhatsApp"
                       className="text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 border border-border rounded-md hover:bg-muted flex items-center gap-1">
                       <MessageSquare className="h-3 w-3" /> WhatsApp
                     </button>
@@ -249,23 +238,19 @@ function Avatar({ name, url }: { name: string; url: string | null }) {
   );
 }
 
-async function sendWelcome(c: ClientRow) {
+async function sendWelcome(c: ClientRow, sessionId: string) {
   if (!c.whatsapp_number && !c.phone) {
     toast.error("No WhatsApp number on file.");
     return;
   }
-  const tmpl = WHATSAPP_TEMPLATES.find((t) => t.key === "just_because");
   const body = `Welcome to COTERIE Nail Sanctuary, ${c.full_name}. You're now in our circle. Book your next sanctuary session via WhatsApp or visit us at Shujaah Mall, Kilimani. — COTERIE`;
-  const { error } = await supabase.from("whatsapp_messages").insert({
-    client_id: c.id,
-    template_key: "welcome_onboard",
-    body,
-    status: "sent",
-  });
-  if (error) toast.error(error.message);
-  else toast.success(`Welcome message queued for ${c.full_name}`);
-  void tmpl;
+  try {
+    await queueWelcomeMessageFn({ data: { sessionId, clientId: c.id, body } });
+    toast.success(`Welcome message queued for ${c.full_name}`);
+  } catch (e: any) { toast.error(e.message); }
+  void WHATSAPP_TEMPLATES;
 }
+
 
 async function upgradeToFounder(c: ClientRow) {
   const ok = window.confirm(`Upgrade ${c.full_name} to Founder Circle? This opens enrollment.`);
@@ -298,20 +283,20 @@ function QuickAddModal({
   const [whatsappSame, setWhatsappSame] = useState(!client?.whatsapp_number || client?.whatsapp_number === client?.phone);
   const [sendWelcomeOpt, setSendWelcomeOpt] = useState(!client);
   const [referrerQ, setReferrerQ] = useState("");
-
+  const sessionId = session?.sessionId;
 
   const { data: referrers } = useQuery({
-    queryKey: ["referrer-search", referrerQ],
+    queryKey: ["referrer-search", referrerQ, sessionId],
     queryFn: async () => {
-      if (!referrerQ.trim()) return [];
-      const { data } = await supabase.from("clients").select("id, full_name, phone").ilike("full_name", `%${referrerQ}%`).limit(5);
-      return data ?? [];
+      if (!referrerQ.trim() || !sessionId) return [];
+      return await searchClientsByNameFn({ data: { sessionId, q: referrerQ } });
     },
-    enabled: form.referral_source === "Referral",
+    enabled: form.referral_source === "Referral" && !!sessionId,
   });
 
   const save = useMutation({
     mutationFn: async () => {
+      if (!sessionId) throw new Error("Not signed in");
       if (!form.full_name.trim()) throw new Error("Name is required");
       const phone = normalizeKePhone(form.phone);
       if (!phone) throw new Error("Invalid phone (use +254… or 07xx…)");
@@ -320,8 +305,7 @@ function QuickAddModal({
 
       const payload: any = {
         full_name: form.full_name.trim(),
-        phone,
-        whatsapp_number: wa,
+        phone, whatsapp_number: wa,
         email: form.email || null,
         birthday: form.birthday || null,
         address: form.address || null,
@@ -334,31 +318,18 @@ function QuickAddModal({
         reminder_interval_days: form.reminder_interval_days ?? null,
       };
 
-
-      let clientId = client?.id;
-      if (client) {
-        const { error } = await supabase.from("clients").update(payload).eq("id", client.id);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase.from("clients").insert(payload).select("id").single();
-        if (error) throw error;
-        clientId = data.id;
-      }
+      const result = await upsertRegistryClientFn({ data: { sessionId, id: client?.id, payload } }) as any;
+      const clientId = result?.id ?? client?.id;
 
       if (form.client_type === "prospect" && clientId) {
-        await supabase.from("founder_waitlist").upsert(
-          { client_id: clientId, priority_score: 10, notes: form.notes || null },
-          { onConflict: "client_id" },
-        );
+        await upsertFounderWaitlistFn({ data: { sessionId, clientId, notes: form.notes || null } });
       }
 
       if (!client && sendWelcomeOpt && clientId && wa) {
-        await supabase.from("whatsapp_messages").insert({
-          client_id: clientId,
-          template_key: "welcome_onboard",
+        await queueWelcomeMessageFn({ data: {
+          sessionId, clientId,
           body: `Welcome to COTERIE Nail Sanctuary, ${form.full_name}. You're now in our circle. Book your next sanctuary session via WhatsApp or visit us at Shujaah Mall, Kilimani. — COTERIE`,
-          status: "sent",
-        });
+        } });
       }
     },
     onSuccess: () => {
@@ -368,6 +339,7 @@ function QuickAddModal({
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   return (
     <Modal onClose={onClose} title={client ? "Edit Client" : "New Client"}>
@@ -537,6 +509,8 @@ const TEMPLATE_HEADERS = [
 ];
 
 function BulkImport({ onDone }: { onDone: () => void }) {
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [existing, setExisting] = useState<Set<string>>(new Set());
@@ -581,9 +555,9 @@ function BulkImport({ onDone }: { onDone: () => void }) {
       return;
     }
 
-    // Fetch existing phone numbers for dup check
-    const { data: existingClients } = await supabase.from("clients").select("phone");
-    const existingPhones = new Set((existingClients ?? []).map((c: any) => c.phone).filter(Boolean));
+    if (!sessionId) { toast.error("Not signed in"); return; }
+    const phones = await getExistingPhonesFn({ data: { sessionId } }) as string[];
+    const existingPhones = new Set(phones);
     setExisting(existingPhones);
 
     const parsed: ParsedRow[] = lines.slice(1).map((ln) => {
@@ -639,28 +613,27 @@ function BulkImport({ onDone }: { onDone: () => void }) {
       const insertPayload = valid.map(toRow);
       let inserted: any[] = [];
       if (insertPayload.length) {
-        const { data, error } = await supabase.from("clients").insert(insertPayload).select("id, client_type");
-        if (error) throw error;
-        inserted = data ?? [];
+        if (!sessionId) throw new Error("Not signed in");
+        inserted = (await bulkInsertClientsFn({ data: { sessionId, rows: insertPayload as any } })) as any[];
       }
 
       // Optionally update duplicates by phone
       let updatedCount = 0;
-      if (dupMode === "update" && dups.length) {
+      if (dupMode === "update" && dups.length && sessionId) {
         for (const r of dups) {
-          const patch = toRow(r);
-          const { error } = await supabase.from("clients").update(patch).eq("phone", r.phone);
-          if (!error) updatedCount += 1;
+          try {
+            await bulkUpdateClientByPhoneFn({ data: { sessionId, phone: r.phone, patch: toRow(r) as any } });
+            updatedCount += 1;
+          } catch {}
         }
       }
 
       // Add prospects to waitlist
       const prospects = inserted.filter((d: any) => d.client_type === "prospect");
-      if (prospects.length) {
-        await supabase.from("founder_waitlist").insert(
-          prospects.map((p: any) => ({ client_id: p.id, priority_score: 10 })),
-        );
+      if (prospects.length && sessionId) {
+        await insertFounderWaitlistBulkFn({ data: { sessionId, clientIds: prospects.map((p: any) => p.id) } });
       }
+
 
       setResult({
         added: insertPayload.length,
@@ -781,6 +754,8 @@ function BulkImport({ onDone }: { onDone: () => void }) {
 
 function HistoryModal({ client, onClose }: { client: ClientRow; onClose: () => void }) {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const [form, setForm] = useState({
     appointment_type: "full_manicure",
     scheduled_date: new Date().toISOString().slice(0, 10),
@@ -790,29 +765,24 @@ function HistoryModal({ client, onClose }: { client: ClientRow; onClose: () => v
   });
 
   const { data: past } = useQuery({
-    queryKey: ["client-history", client.id],
-    queryFn: async () => {
-      const { data } = await supabase.from("appointments")
-        .select("id, appointment_type, scheduled_date, scheduled_time, status, notes")
-        .eq("client_id", client.id)
-        .order("scheduled_date", { ascending: false }).limit(20);
-      return data ?? [];
-    },
+    queryKey: ["client-history", client.id, sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => await listClientHistoryFn({ data: { sessionId: sessionId!, clientId: client.id } }),
   });
 
   const add = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("appointments").insert({
-        client_id: client.id,
-        appointment_type: form.appointment_type as any,
+      if (!sessionId) throw new Error("Not signed in");
+      await addPastAppointmentFn({ data: {
+        sessionId, clientId: client.id,
+        appointment_type: form.appointment_type,
         scheduled_date: form.scheduled_date,
         scheduled_time: form.scheduled_time,
         duration_minutes: form.duration_minutes,
-        status: "completed" as any,
         notes: form.notes || null,
-      });
-      if (error) throw error;
+      } });
     },
+
     onSuccess: () => {
       toast.success("Past appointment added");
       qc.invalidateQueries({ queryKey: ["client-history", client.id] });

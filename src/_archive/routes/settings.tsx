@@ -20,6 +20,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { getSettingFn, saveSettingFn } from "@/lib/app-settings.functions";
+import { listStaffFn, createStaffFn, setStaffActiveFn, deleteStaffFn } from "@/lib/admin-staff.functions";
+import { setStaffPinFn } from "@/lib/auth.functions";
+import {
+  getActiveCommissionFn, listCommissionHistoryFn, saveCommissionFn, exportTablesFn,
+} from "@/lib/admin-registry.functions";
 import { Layout, PageHeader } from "@/components/Layout";
 import { ServiceAreaMap } from "@/components/ServiceAreaMap";
 import { Button } from "@/components/ui/button";
@@ -367,35 +372,29 @@ function RulesTab() {
 // ---------- STAFF ----------
 function StaffTab() {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const { data: staff = [] } = useQuery({
-    queryKey: ["staff"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("staff").select("*").order("created_at");
-      if (error) throw error;
-      return data;
-    },
+    queryKey: ["staff", sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => await listStaffFn({ data: { sessionId: sessionId! } }),
   });
   const [form, setForm] = useState({ full_name: "", role: "technician", pin: "", email: "", phone: "" });
 
   const add = useMutation({
     mutationFn: async () => {
+      if (!sessionId) throw new Error("Not signed in");
       if (!form.full_name) throw new Error("Name required");
       if (form.pin && !/^\d{4}$/.test(form.pin)) throw new Error("PIN must be 4 digits");
-      // Insert staff WITHOUT the plain pin column — we hash it via RPC below
-      const { data: created, error } = await supabase
-        .from("staff")
-        .insert({
-          full_name: form.full_name,
-          role: form.role as any,
-          email: form.email || null,
-          phone: form.phone || null,
-        } as any)
-        .select("id")
-        .single();
-      if (error) throw error;
+      const created = await createStaffFn({ data: {
+        sessionId,
+        full_name: form.full_name,
+        role: form.role as any,
+        email: form.email || "",
+        phone: form.phone || "",
+      } });
       if (form.pin) {
-        const { setStaffPinFn } = await import("@/lib/auth.functions");
-        const res = await setStaffPinFn({ data: { staffId: created.id, pin: form.pin } });
+        const res = await setStaffPinFn({ data: { sessionId, staffId: created.id, pin: form.pin } });
         if (!res.ok) throw new Error("Failed to set PIN");
       }
     },
@@ -409,28 +408,30 @@ function StaffTab() {
 
   const toggle = useMutation({
     mutationFn: async ({ id, active }: any) => {
-      const { error } = await supabase.from("staff").update({ active }).eq("id", id);
-      if (error) throw error;
+      if (!sessionId) throw new Error("Not signed in");
+      await setStaffActiveFn({ data: { sessionId, staffId: id, active } });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff"] }),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("staff").delete().eq("id", id);
-      if (error) throw error;
+      if (!sessionId) throw new Error("Not signed in");
+      await deleteStaffFn({ data: { sessionId, staffId: id } });
     },
     onSuccess: () => {
       toast.success("Removed");
       qc.invalidateQueries({ queryKey: ["staff"] });
     },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const setPin = useMutation({
     mutationFn: async ({ id, pin }: { id: string; pin: string }) => {
+      if (!sessionId) throw new Error("Not signed in");
       if (!/^\d{4}$/.test(pin)) throw new Error("PIN must be 4 digits");
-      const { setStaffPinFn } = await import("@/lib/auth.functions");
-      const res = await setStaffPinFn({ data: { staffId: id, pin } });
+      const res = await setStaffPinFn({ data: { sessionId, staffId: id, pin } });
       if (!res.ok) throw new Error("Failed to set PIN");
     },
     onSuccess: () => {
@@ -552,31 +553,17 @@ function StaffRow({ staff, roleClass, onToggle, onDelete, onSetPin }: {
 
 function CommissionEditor({ staffId }: { staffId: string }) {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const { data: current } = useQuery({
-    queryKey: ["commission-active", staffId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("staff_commission_settings")
-        .select("*")
-        .eq("staff_id", staffId)
-        .eq("is_active", true)
-        .order("effective_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
+    queryKey: ["commission-active", staffId, sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => await getActiveCommissionFn({ data: { sessionId: sessionId!, staffId } }),
   });
   const { data: history = [] } = useQuery({
-    queryKey: ["commission-history", staffId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("staff_commission_settings")
-        .select("id, commission_percentage, commission_type, fixed_amount_ksh, effective_date, notes, created_at")
-        .eq("staff_id", staffId)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data ?? [];
-    },
+    queryKey: ["commission-history", staffId, sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => await listCommissionHistoryFn({ data: { sessionId: sessionId!, staffId } }),
   });
 
   const [pct, setPct] = useState<string>("");
@@ -585,24 +572,21 @@ function CommissionEditor({ staffId }: { staffId: string }) {
   const [notes, setNotes] = useState<string>("");
 
   useEffect(() => {
-    setPct(String(current?.commission_percentage ?? 0));
-    setType((current?.commission_type as string) ?? "percentage_of_sale");
-    setFixed(String(current?.fixed_amount_ksh ?? 0));
+    setPct(String((current as any)?.commission_percentage ?? 0));
+    setType(((current as any)?.commission_type as string) ?? "percentage_of_sale");
+    setFixed(String((current as any)?.fixed_amount_ksh ?? 0));
   }, [current]);
 
   const save = useMutation({
     mutationFn: async () => {
-      // Deactivate prior settings, insert new active row
-      await supabase.from("staff_commission_settings").update({ is_active: false }).eq("staff_id", staffId).eq("is_active", true);
-      const { error } = await supabase.from("staff_commission_settings").insert({
-        staff_id: staffId,
+      if (!sessionId) throw new Error("Not signed in");
+      await saveCommissionFn({ data: {
+        sessionId, staffId,
         commission_percentage: Number(pct) || 0,
-        commission_type: type,
+        commission_type: type as any,
         fixed_amount_ksh: Number(fixed) || 0,
         notes: notes || null,
-        is_active: true,
-      } as any);
-      if (error) throw error;
+      } });
     },
     onSuccess: () => {
       toast.success("Commission rate updated");
@@ -612,6 +596,7 @@ function CommissionEditor({ staffId }: { staffId: string }) {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   return (
     <div className="px-3 pb-3 border-t bg-muted/30 space-y-3 pt-3">
@@ -736,15 +721,14 @@ function DataTab() {
   const { data, save } = useSetting<any>("data");
   const [d, setD] = useState<any>({});
   useEffect(() => { if (data) setD(data); }, [data]);
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
 
   const exportData = async (format: "json" | "csv") => {
+    if (!sessionId) return toast.error("Not signed in");
     toast.info("Preparing export…");
     const tables = ["clients", "founder_circle", "appointments", "perks_usage", "payments", "products", "founder_purchases"];
-    const out: Record<string, any[]> = {};
-    for (const t of tables) {
-      const { data } = await (supabase as any).from(t).select("*");
-      out[t] = data || [];
-    }
+    const out = await exportTablesFn({ data: { sessionId, tables } }) as Record<string, any[]>;
     if (format === "json") {
       const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
       downloadBlob(blob, `coterie-backup-${new Date().toISOString().slice(0, 10)}.json`);
@@ -765,6 +749,8 @@ function DataTab() {
   };
 
   const importCsv = async (file: File) => {
+    if (!sessionId) return toast.error("Not signed in");
+    const { bulkInsertClientsFn } = await import("@/lib/admin-registry.functions");
     const text = await file.text();
     const [header, ...rows] = text.trim().split("\n");
     const cols = header.split(",").map((s) => s.trim());
@@ -773,11 +759,14 @@ function DataTab() {
       const obj: any = {};
       cols.forEach((c, i) => (obj[c] = (parts[i] || "").trim()));
       return obj;
-    });
-    const { error } = await supabase.from("clients").insert(records as any);
-    if (error) toast.error(error.message);
-    else toast.success(`Imported ${records.length} clients`);
+    }).filter((r: any) => r.full_name && r.phone);
+    if (!records.length) return toast.error("No valid rows found");
+    try {
+      await bulkInsertClientsFn({ data: { sessionId, rows: records as any } });
+      toast.success(`Imported ${records.length} clients`);
+    } catch (e: any) { toast.error(e.message); }
   };
+
 
   return (
     <div className="space-y-6">
