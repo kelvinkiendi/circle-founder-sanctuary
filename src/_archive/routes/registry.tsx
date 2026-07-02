@@ -44,6 +44,7 @@ const REFERRAL_SOURCES = ["Instagram", "Referral", "Walk-in", "Google", "Friend"
 
 export function Registry() {
   const { session } = useSession();
+  const sessionId = session?.sessionId;
   const canBulkImport = session?.role === "admin" || session?.role === "manager";
   const canEnrollFounder = session?.role === "admin";
 
@@ -55,37 +56,21 @@ export function Registry() {
   const [historyFor, setHistoryFor] = useState<ClientRow | null>(null);
 
   const { data: clients, refetch } = useQuery({
-    queryKey: ["registry-clients", q, filter],
+    queryKey: ["registry-clients", sessionId, q, filter],
+    enabled: !!sessionId,
     queryFn: async () => {
-      let qb = supabase
-        .from("clients")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (q.trim()) {
-        qb = qb.or(
-          `full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%,email.ilike.%${q}%`,
-        );
-      }
-      if (filter === "regular") qb = qb.eq("client_type", "regular");
-      if (filter === "founder") qb = qb.eq("client_type", "founder");
-      if (filter === "prospect") qb = qb.eq("client_type", "prospect");
-      if (filter === "birthday") {
-        const m = String(new Date().getMonth() + 1).padStart(2, "0");
-        qb = qb.like("birthday", `____-${m}-__`);
-      }
-      const { data, error } = await qb;
-      if (error) throw error;
-      return (data ?? []) as ClientRow[];
+      const rows = await listRegistryClientsFn({ data: { sessionId: sessionId!, q, filter } });
+      return (rows ?? []) as ClientRow[];
     },
   });
 
   const { data: founderMap } = useQuery({
-    queryKey: ["registry-founder-map"],
+    queryKey: ["registry-founder-map", sessionId],
+    enabled: !!sessionId,
     queryFn: async () => {
-      const { data } = await supabase.from("founder_circle").select("client_id, founder_number, status");
+      const rows = await getFounderMapFn({ data: { sessionId: sessionId! } });
       const m: Record<string, { number: number | null; status: string }> = {};
-      (data ?? []).forEach((r: any) => {
+      (rows ?? []).forEach((r: any) => {
         m[r.client_id] = { number: r.founder_number, status: r.status };
       });
       return m;
@@ -93,15 +78,12 @@ export function Registry() {
   });
 
   const { data: lastVisits } = useQuery({
-    queryKey: ["registry-last-visits"],
+    queryKey: ["registry-last-visits", sessionId],
+    enabled: !!sessionId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select("client_id, scheduled_date")
-        .order("scheduled_date", { ascending: false })
-        .limit(500);
+      const rows = await getLastVisitsFn({ data: { sessionId: sessionId! } });
       const m: Record<string, string> = {};
-      (data ?? []).forEach((r: any) => {
+      (rows ?? []).forEach((r: any) => {
         if (!m[r.client_id]) m[r.client_id] = r.scheduled_date;
       });
       return m;
@@ -111,6 +93,7 @@ export function Registry() {
   return (
     <>
       <PageHeader
+
         eyebrow="The Registry · Client Onboarding"
         title="Welcome every soul into the sanctuary."
         description="Quick add, bulk import, and manage every client in COTERIE's circle."
