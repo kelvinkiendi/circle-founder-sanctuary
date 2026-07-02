@@ -20,6 +20,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { getSettingFn, saveSettingFn } from "@/lib/app-settings.functions";
+import { listStaffFn, createStaffFn, setStaffActiveFn, deleteStaffFn } from "@/lib/admin-staff.functions";
+import { setStaffPinFn } from "@/lib/auth.functions";
+import {
+  getActiveCommissionFn, listCommissionHistoryFn, saveCommissionFn, exportTablesFn,
+} from "@/lib/admin-registry.functions";
 import { Layout, PageHeader } from "@/components/Layout";
 import { ServiceAreaMap } from "@/components/ServiceAreaMap";
 import { Button } from "@/components/ui/button";
