@@ -1,11 +1,17 @@
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { WHATSAPP_TEMPLATES } from "@/lib/whatsapp-templates";
 import { normalizeKePhone } from "@/lib/phone";
 import { sendReminderNowFn } from "@/lib/portal.functions";
+import {
+  listRegistryClientsFn, getFounderMapFn, getLastVisitsFn,
+  searchClientsByNameFn, upsertRegistryClientFn, upsertFounderWaitlistFn,
+  queueWelcomeMessageFn, getExistingPhonesFn, bulkInsertClientsFn,
+  bulkUpdateClientByPhoneFn, insertFounderWaitlistBulkFn,
+  listClientHistoryFn, addPastAppointmentFn,
+} from "@/lib/admin-registry.functions";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Layout";
