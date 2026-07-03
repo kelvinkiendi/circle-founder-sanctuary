@@ -17,7 +17,10 @@ export const loginWithPin = createServerFn({ method: "POST" })
       p_device: data.device ?? undefined,
       p_user_agent: data.userAgent ?? undefined,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[loginWithPin]", error.message);
+      return { ok: false as const };
+    }
     const row = Array.isArray(rows) ? rows[0] : rows;
     if (!row) return { ok: false as const };
     return {
