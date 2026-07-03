@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { dbError } from "@/lib/staff-auth.server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 

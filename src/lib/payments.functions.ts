@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { requireStaff, type StaffRole } from "@/lib/staff-auth.server";
+import { requireStaff, type StaffRole, dbError } from "@/lib/staff-auth.server";
 
 const SessionField = { sessionId: z.string().uuid() } as const;
 

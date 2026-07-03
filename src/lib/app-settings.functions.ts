@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireStaff } from "@/lib/staff-auth.server";
+import { requireStaff, dbError } from "@/lib/staff-auth.server";
 
 const Session = z.object({ sessionId: z.string().uuid() });
 
