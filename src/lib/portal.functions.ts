@@ -266,14 +266,24 @@ const AppointmentInsert = z.object({
   created_by: z.string().max(120).nullable().optional(),
 });
 
+const APPOINTMENT_TYPES = new Set([
+  "weekly_refresh","gel_rescue","travel_touchup","full_manicure","pedicure",
+  "surprise_full","random_upgrade","birthday_sanctuary","emergency",
+]);
+
 export const createAppointmentFn = createServerFn({ method: "POST" })
   .inputValidator((i) => Session.extend({ appt: AppointmentInsert }).parse(i))
   .handler(async ({ data }) => {
     await requireStaff(data.sessionId);
+    const appt: any = { ...data.appt };
+    // Coerce free-form service slugs (e.g. "gel_manicure") to a valid enum,
+    // preserving the original label in service_description.
+    if (!APPOINTMENT_TYPES.has(appt.appointment_type)) {
+      appt.service_description = appt.service_description ?? appt.appointment_type;
+      appt.appointment_type = "full_manicure";
+    }
     const { data: row, error } = await supabaseAdmin
-      .from("appointments")
-      .insert(data.appt as any)
-      .select().single();
+      .from("appointments").insert(appt).select().single();
     if (error) dbError(error);
     return row;
   });
