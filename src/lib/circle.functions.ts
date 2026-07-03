@@ -289,8 +289,9 @@ export const checkFounderRateEligibility = createServerFn({ method: "POST" })
 
 // ============ FUNCTION 7 ============
 export const processEnrollment = createServerFn({ method: "POST" })
-  .inputValidator((d: { client_id: string; founder_number: number; payment_method: "full" | "installment"; installment_amount?: number }) =>
+  .inputValidator((d: { sessionId: string; client_id: string; founder_number: number; payment_method: "full" | "installment"; installment_amount?: number }) =>
     z.object({
+      sessionId: z.string().uuid(),
       client_id: z.string().uuid(),
       founder_number: z.number().int().min(1).max(25),
       payment_method: z.enum(["full", "installment"]),
@@ -298,6 +299,7 @@ export const processEnrollment = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId, ["admin"]);
     const { data: existing } = await supabaseAdmin
       .from("founder_circle")
       .select("id")
