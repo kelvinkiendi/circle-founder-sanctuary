@@ -93,6 +93,6 @@ export const listAuditEventsFn = createServerFn({ method: "POST" })
     if (data.entity) qb = qb.eq("entity", data.entity);
     if (data.actor) qb = qb.eq("actor", data.actor);
     const { data: rows, error } = await qb;
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return rows ?? [];
   });

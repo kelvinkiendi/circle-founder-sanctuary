@@ -40,7 +40,7 @@ export const getSessionFn = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabaseAdmin.rpc("get_staff_session", {
       p_session: data.sessionId,
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     const row = Array.isArray(rows) ? rows[0] : rows;
     if (!row) return { ok: false as const };
     return {
@@ -70,7 +70,7 @@ export const changePinFn = createServerFn({ method: "POST" })
     const { data: ok, error } = await supabaseAdmin.rpc("change_staff_pin", {
       p_session: data.sessionId, p_new_pin: data.newPin,
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: !!ok };
   });
 
@@ -84,7 +84,7 @@ export const adminResetPinFn = createServerFn({ method: "POST" })
     const { data: ok, error } = await supabaseAdmin.rpc("admin_reset_pin", {
       p_admin_session: data.sessionId, p_staff_id: data.staffId, p_new_pin: newPin,
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     if (!ok) return { ok: false as const };
     return { ok: true as const, tempPin: newPin };
   });
@@ -101,7 +101,7 @@ export const setStaffPinFn = createServerFn({ method: "POST" })
     const { data: ok, error } = await supabaseAdmin.rpc("set_staff_pin", {
       p_staff_id: data.staffId, p_pin: data.pin,
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: !!ok };
   });
 

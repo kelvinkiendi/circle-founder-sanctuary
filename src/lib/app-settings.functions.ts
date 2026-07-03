@@ -21,7 +21,7 @@ export const getSettingFn = createServerFn({ method: "POST" })
       .select("value")
       .eq("key", data.key)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { value: (row?.value ?? {}) as any };
   });
 
@@ -61,7 +61,7 @@ export const saveSettingFn = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin
       .from("app_settings")
       .upsert({ key: data.key, value: data.value as any, updated_at: new Date().toISOString() });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
 
     const diff = shallowDiff(before, data.value);
     const changedKeys = Object.keys(diff);

@@ -135,7 +135,7 @@ export const createClientFn = createServerFn({ method: "POST" })
       created_by: createdBy,
       reminder_interval_days: data.reminder_interval_days ?? null,
     }).select().single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return row;
   });
 
@@ -149,7 +149,7 @@ export const updateClientReminderFn = createServerFn({ method: "POST" })
     void staff;
     const { error } = await supabaseAdmin
       .from("clients").update({ reminder_interval_days: data.days }).eq("id", data.clientId);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -179,7 +179,7 @@ export const sendReminderNowFn = createServerFn({ method: "POST" })
       status: "queued",
       created_by: `staff:${staff.staff_id}`,
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -210,7 +210,7 @@ export const setClientOptOutFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireStaff(data.sessionId);
     const { error } = await supabaseAdmin.from("clients").update({ whatsapp_opt_out: data.optedOut }).eq("id", data.clientId);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -243,7 +243,7 @@ export const redeemPerkFn = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("perks_usage").update({
       status: "used", used_date: data.date, related_appointment_id: data.appointmentId,
     }).eq("perk_type", data.perkType as any).eq("status", "available").eq("founder_id", founder.id);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true as const };
   });
 
@@ -271,7 +271,7 @@ export const createAppointmentFn = createServerFn({ method: "POST" })
       .from("appointments")
       .insert(data.appt as any)
       .select().single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return row;
   });
 
@@ -404,6 +404,6 @@ export const logWhatsAppMessageFn = createServerFn({ method: "POST" })
       body: data.body,
       status: "sent",
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });

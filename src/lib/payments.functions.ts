@@ -193,7 +193,7 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
       })
       .select()
       .single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
 
     return {
       payment_id: row.id,
@@ -228,7 +228,7 @@ export const updatePaymentStatus = createServerFn({ method: "POST" })
     }
     const { data: payment, error } = await supabaseAdmin
       .from("payments").update(patch).eq("id", data.payment_id).select().single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
 
     // Auto-generate receipt on success
     let receipt = null;
@@ -270,7 +270,7 @@ export const retryPayment = createServerFn({ method: "POST" })
       related_product_id: original.related_product_id,
       due_date: original.due_date,
     }).select().single();
-    if (insErr) throw new Error(insErr.message);
+    if (insErr) dbError(insErr);
     return { payment_id: row.id, checkout_request_id: checkoutId };
   });
 
@@ -340,7 +340,7 @@ export const runSuspensionSweep = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await gateStaff(data.sessionId, ["admin"]);
     const { data: suspended, error } = await supabaseAdmin.rpc("suspend_overdue_founders");
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { suspended: suspended ?? 0 };
   });
 
@@ -391,7 +391,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
       related_appointment_id: data.related_appointment_id ?? null,
       created_by: data.created_by ?? null,
     }).select().single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
 
     if (data.line_items?.length) {
       await (supabaseAdmin as any).from("payment_line_items").insert(
@@ -458,6 +458,6 @@ export const addPaymentLineItems = createServerFn({ method: "POST" })
         total_price: li.unit_price * li.quantity,
       })),
     );
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });

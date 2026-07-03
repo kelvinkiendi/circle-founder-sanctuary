@@ -321,7 +321,7 @@ export const processEnrollment = createServerFn({ method: "POST" })
       })
       .select()
       .single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
 
     // Generate perks: 26 weekly, 6 travel, 1 birthday
     const perks: any[] = [];
