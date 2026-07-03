@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { requireStaff } from "@/lib/staff-auth.server";
+import { requireStaff, dbError } from "@/lib/staff-auth.server";
 
 const Session = z.object({ sessionId: z.string().uuid() });
 const READERS = ["admin", "manager", "guardian", "partner"] as const;
@@ -93,6 +93,6 @@ export const listAuditEventsFn = createServerFn({ method: "POST" })
     if (data.entity) qb = qb.eq("entity", data.entity);
     if (data.actor) qb = qb.eq("actor", data.actor);
     const { data: rows, error } = await qb;
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return rows ?? [];
   });

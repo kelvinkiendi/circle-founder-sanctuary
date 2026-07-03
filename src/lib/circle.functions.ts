@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { dbError, requireStaff } from "@/lib/staff-auth.server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -192,8 +193,9 @@ export const validateBirthdaySanctuary = createServerFn({ method: "POST" })
 
 // ============ FUNCTION 5 ============
 export const awardSurpriseMoment = createServerFn({ method: "POST" })
-  .inputValidator((d: { founder_id: string; surprise_type: "surprise_full" | "random_upgrade" | "just_because"; awarded_by_staff_id: string; reason?: string }) =>
+  .inputValidator((d: { sessionId: string; founder_id: string; surprise_type: "surprise_full" | "random_upgrade" | "just_because"; awarded_by_staff_id: string; reason?: string }) =>
     z.object({
+      sessionId: z.string().uuid(),
       founder_id: z.string().uuid(),
       surprise_type: z.enum(["surprise_full", "random_upgrade", "just_because"]),
       awarded_by_staff_id: z.string(),
@@ -201,6 +203,7 @@ export const awardSurpriseMoment = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId, ["admin", "manager"]);
     const { data: founder } = await supabaseAdmin
       .from("founder_circle")
       .select("id, enrollment_date, term_end_date, engagement_score")
@@ -250,7 +253,7 @@ export const awardSurpriseMoment = createServerFn({ method: "POST" })
       })
       .select()
       .single();
-    if (error) return { awarded: false, reason: error.message };
+    if (error) { console.error("[awardSurpriseMoment]", error.message); return { awarded: false, reason: "Could not record surprise moment" }; }
 
     const templates: Record<string, string> = {
       surprise_full: "Your Refresh today is becoming a full Sanctuary Session.",
@@ -286,8 +289,9 @@ export const checkFounderRateEligibility = createServerFn({ method: "POST" })
 
 // ============ FUNCTION 7 ============
 export const processEnrollment = createServerFn({ method: "POST" })
-  .inputValidator((d: { client_id: string; founder_number: number; payment_method: "full" | "installment"; installment_amount?: number }) =>
+  .inputValidator((d: { sessionId: string; client_id: string; founder_number: number; payment_method: "full" | "installment"; installment_amount?: number }) =>
     z.object({
+      sessionId: z.string().uuid(),
       client_id: z.string().uuid(),
       founder_number: z.number().int().min(1).max(25),
       payment_method: z.enum(["full", "installment"]),
@@ -295,6 +299,7 @@ export const processEnrollment = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId, ["admin"]);
     const { data: existing } = await supabaseAdmin
       .from("founder_circle")
       .select("id")
@@ -321,7 +326,7 @@ export const processEnrollment = createServerFn({ method: "POST" })
       })
       .select()
       .single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
 
     // Generate perks: 26 weekly, 6 travel, 1 birthday
     const perks: any[] = [];

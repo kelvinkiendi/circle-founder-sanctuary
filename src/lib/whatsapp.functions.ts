@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getTemplate, type TemplateKey } from "@/lib/whatsapp-templates";
-import { requireStaff } from "@/lib/staff-auth.server";
+import { requireStaff, dbError } from "@/lib/staff-auth.server";
 
 const SENDER_NUMBER = "+254722365861";
 
@@ -37,7 +37,7 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
       .select("id, full_name, whatsapp_number, phone, whatsapp_opt_out")
       .eq("id", data.clientId)
       .maybeSingle();
-    if (cErr) throw new Error(cErr.message);
+    if (cErr) dbError(cErr);
     if (!client) throw new Error("Client not found");
     if (client.whatsapp_opt_out) return { ok: false as const, reason: "opt_out" };
 
@@ -98,7 +98,7 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (logErr) throw new Error(logErr.message);
+    if (logErr) dbError(logErr);
 
     return {
       ok: status === "sent" as const,

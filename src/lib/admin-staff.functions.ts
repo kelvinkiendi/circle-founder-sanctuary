@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { requireStaff } from "@/lib/staff-auth.server";
+import { requireStaff, dbError } from "@/lib/staff-auth.server";
 
 const Session = z.object({ sessionId: z.string().uuid() });
 const ROLES = ["admin", "manager", "technician", "reception", "guardian", "partner"] as const;
@@ -17,7 +17,7 @@ export const listStaffFn = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false });
     if (data.role) qb = qb.eq("role", data.role);
     const { data: rows, error } = await qb;
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return (rows ?? []).map((r: any) => ({
       ...r,
       pin_set: !!r.pin_hash,
@@ -48,7 +48,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
       } as any)
       .select("id, full_name, role")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return row;
   });
 
@@ -62,7 +62,7 @@ export const setStaffActiveFn = createServerFn({ method: "POST" })
     await requireStaff(data.sessionId, ["admin"]);
     const { error } = await supabaseAdmin
       .from("staff").update({ active: data.active }).eq("id", data.staffId);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -73,6 +73,6 @@ export const deleteStaffFn = createServerFn({ method: "POST" })
     const me = await requireStaff(data.sessionId, ["admin"]);
     if (me.staff_id === data.staffId) throw new Error("Cannot delete yourself");
     const { error } = await supabaseAdmin.from("staff").delete().eq("id", data.staffId);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });

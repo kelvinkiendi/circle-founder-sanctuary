@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { requireStaff } from "@/lib/staff-auth.server";
+import { requireStaff, dbError } from "@/lib/staff-auth.server";
 
 const Session = z.object({ sessionId: z.string().uuid() });
 
@@ -86,8 +86,11 @@ export const searchClientsFn = createServerFn({ method: "POST" })
       qb = qb.eq("created_by", `tech:${staff.staff_id}`);
     }
     if (data.q?.trim()) {
-      const q = data.q.replace(/[%,]/g, "");
-      qb = qb.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%`);
+      // Allowlist alphanumerics, spaces, and hyphens to prevent PostgREST filter injection.
+      const q = data.q.replace(/[^\w\s-]/g, "").slice(0, 80);
+      if (q) {
+        qb = qb.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%`);
+      }
     }
     const { data: rows } = await qb;
     return rows ?? [];
@@ -135,7 +138,7 @@ export const createClientFn = createServerFn({ method: "POST" })
       created_by: createdBy,
       reminder_interval_days: data.reminder_interval_days ?? null,
     }).select().single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return row;
   });
 
@@ -149,7 +152,7 @@ export const updateClientReminderFn = createServerFn({ method: "POST" })
     void staff;
     const { error } = await supabaseAdmin
       .from("clients").update({ reminder_interval_days: data.days }).eq("id", data.clientId);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -179,7 +182,7 @@ export const sendReminderNowFn = createServerFn({ method: "POST" })
       status: "queued",
       created_by: `staff:${staff.staff_id}`,
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -210,7 +213,7 @@ export const setClientOptOutFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireStaff(data.sessionId);
     const { error } = await supabaseAdmin.from("clients").update({ whatsapp_opt_out: data.optedOut }).eq("id", data.clientId);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -243,7 +246,7 @@ export const redeemPerkFn = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("perks_usage").update({
       status: "used", used_date: data.date, related_appointment_id: data.appointmentId,
     }).eq("perk_type", data.perkType as any).eq("status", "available").eq("founder_id", founder.id);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true as const };
   });
 
@@ -271,7 +274,7 @@ export const createAppointmentFn = createServerFn({ method: "POST" })
       .from("appointments")
       .insert(data.appt as any)
       .select().single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return row;
   });
 
@@ -404,6 +407,6 @@ export const logWhatsAppMessageFn = createServerFn({ method: "POST" })
       body: data.body,
       status: "sent",
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });

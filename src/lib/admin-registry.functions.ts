@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { requireStaff } from "@/lib/staff-auth.server";
+import { requireStaff, dbError } from "@/lib/staff-auth.server";
 
 const Session = z.object({ sessionId: z.string().uuid() });
 const WRITE_ROLES = ["admin", "manager", "reception"] as const;
@@ -31,7 +31,7 @@ export const listRegistryClientsFn = createServerFn({ method: "POST" })
       qb = qb.like("birthday", `____-${m}-__`);
     }
     const { data: rows, error } = await qb;
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return rows ?? [];
   });
 
@@ -94,13 +94,13 @@ export const upsertRegistryClientFn = createServerFn({ method: "POST" })
     if (data.id) {
       const { data: row, error } = await supabaseAdmin.from("clients")
         .update(clean).eq("id", data.id).select("id").single();
-      if (error) throw new Error(error.message);
+      if (error) dbError(error);
       return row;
     }
     clean.created_by = `${staff.role === "reception" ? "reception" : staff.role === "technician" ? "tech" : staff.role}:${staff.staff_id}`;
     const { data: row, error } = await supabaseAdmin.from("clients")
       .insert(clean).select("id, client_type").single();
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return row;
   });
 
@@ -114,7 +114,7 @@ export const upsertFounderWaitlistFn = createServerFn({ method: "POST" })
       { client_id: data.clientId, priority_score: 10, notes: data.notes ?? null },
       { onConflict: "client_id" },
     );
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -130,7 +130,7 @@ export const queueWelcomeMessageFn = createServerFn({ method: "POST" })
       body: data.body,
       status: "sent",
     });
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -154,7 +154,7 @@ export const bulkInsertClientsFn = createServerFn({ method: "POST" })
     const payload = data.rows.map((r) => ({ ...r, created_by: createdBy }));
     const { data: rows, error } = await supabaseAdmin.from("clients")
       .insert(payload as any).select("id, client_type");
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return rows ?? [];
   });
 
@@ -167,7 +167,7 @@ export const bulkUpdateClientByPhoneFn = createServerFn({ method: "POST" })
     await requireStaff(data.sessionId, [...WRITE_ROLES]);
     const { error } = await supabaseAdmin.from("clients")
       .update(data.patch as any).eq("phone", data.phone);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -180,7 +180,7 @@ export const insertFounderWaitlistBulkFn = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("founder_waitlist").insert(
       data.clientIds.map((id) => ({ client_id: id, priority_score: 10 })),
     );
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -217,7 +217,7 @@ export const addPastAppointmentFn = createServerFn({ method: "POST" })
       status: "completed" as any,
       notes: data.notes || null,
     } as any);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -263,7 +263,7 @@ export const saveCommissionFn = createServerFn({ method: "POST" })
       notes: data.notes || null,
       is_active: true,
     } as any);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -299,7 +299,7 @@ export const updateStaffFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireStaff(data.sessionId, ["admin"]);
     const { error } = await supabaseAdmin.from("staff").update(data.patch as any).eq("id", data.staffId);
-    if (error) throw new Error(error.message);
+    if (error) dbError(error);
     return { ok: true };
   });
 
