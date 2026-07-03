@@ -253,7 +253,7 @@ export const awardSurpriseMoment = createServerFn({ method: "POST" })
       })
       .select()
       .single();
-    if (error) return { awarded: false, reason: error.message };
+    if (error) { console.error("[awardSurpriseMoment]", error.message); return { awarded: false, reason: "Could not record surprise moment" }; }
 
     const templates: Record<string, string> = {
       surprise_full: "Your Refresh today is becoming a full Sanctuary Session.",
