@@ -193,8 +193,9 @@ export const validateBirthdaySanctuary = createServerFn({ method: "POST" })
 
 // ============ FUNCTION 5 ============
 export const awardSurpriseMoment = createServerFn({ method: "POST" })
-  .inputValidator((d: { founder_id: string; surprise_type: "surprise_full" | "random_upgrade" | "just_because"; awarded_by_staff_id: string; reason?: string }) =>
+  .inputValidator((d: { sessionId: string; founder_id: string; surprise_type: "surprise_full" | "random_upgrade" | "just_because"; awarded_by_staff_id: string; reason?: string }) =>
     z.object({
+      sessionId: z.string().uuid(),
       founder_id: z.string().uuid(),
       surprise_type: z.enum(["surprise_full", "random_upgrade", "just_because"]),
       awarded_by_staff_id: z.string(),
@@ -202,6 +203,7 @@ export const awardSurpriseMoment = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireStaff(data.sessionId, ["admin", "manager"]);
     const { data: founder } = await supabaseAdmin
       .from("founder_circle")
       .select("id, enrollment_date, term_end_date, engagement_score")
