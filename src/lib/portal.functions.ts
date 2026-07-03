@@ -86,8 +86,11 @@ export const searchClientsFn = createServerFn({ method: "POST" })
       qb = qb.eq("created_by", `tech:${staff.staff_id}`);
     }
     if (data.q?.trim()) {
-      const q = data.q.replace(/[%,]/g, "");
-      qb = qb.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%`);
+      // Allowlist alphanumerics, spaces, and hyphens to prevent PostgREST filter injection.
+      const q = data.q.replace(/[^\w\s-]/g, "").slice(0, 80);
+      if (q) {
+        qb = qb.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%`);
+      }
     }
     const { data: rows } = await qb;
     return rows ?? [];
