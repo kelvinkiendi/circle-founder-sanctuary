@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Layout, PageHeader } from "@/components/Layout";
 import { RequireRole, useSession } from "@/lib/session";
 import { PortalTabs, type PortalTab } from "@/components/PortalTabs";
 import { CAN, apptSource, APPT_SOURCE_LABEL, APPT_SOURCE_CLASS } from "@/lib/permissions";
 import { Search, UserPlus, Calendar, CreditCard } from "lucide-react";
 import { useState } from "react";
+import { listRegistryClientsFn, getTodayAppointmentsFn } from "@/lib/admin-registry.functions";
+
 
 // Lifted feature sections
 import { Registry } from "@/_archive/routes/registry";
@@ -72,38 +73,28 @@ function DeskShell() {
 }
 
 function FrontDesk() {
+  const { session } = useSession();
+  const sessionId = session?.sessionId;
   const [q, setQ] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
 
   const { data: clients } = useQuery({
-    queryKey: ["concierge-clients", q],
+    queryKey: ["concierge-clients", sessionId, q],
+    enabled: !!sessionId,
     queryFn: async () => {
-      let qb = supabase
-        .from("clients")
-        .select("id, full_name, phone, whatsapp_number, client_type")
-        .limit(20);
-      if (q.trim())
-        qb = qb.or(
-          `full_name.ilike.%${q}%,phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%`,
-        );
-      const { data } = await qb;
-      return data ?? [];
+      const rows = await listRegistryClientsFn({ data: { sessionId: sessionId!, q, filter: "all" } });
+      return (rows ?? []).slice(0, 20);
     },
   });
 
   const { data: appts } = useQuery({
-    queryKey: ["concierge-today"],
+    queryKey: ["concierge-today", sessionId],
+    enabled: !!sessionId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select(
-          "id, scheduled_time, appointment_type, status, created_by, clients(full_name)",
-        )
-        .eq("scheduled_date", today)
-        .order("scheduled_time");
-      return data ?? [];
+      const rows = await getTodayAppointmentsFn({ data: { sessionId: sessionId! } });
+      return rows ?? [];
     },
   });
+
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
