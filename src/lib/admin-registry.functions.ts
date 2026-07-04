@@ -304,3 +304,20 @@ export const updateStaffFn = createServerFn({ method: "POST" })
   });
 
 void READ_ROLES;
+
+/* ============ Front Desk ============ */
+
+export const getTodayAppointmentsFn = createServerFn({ method: "POST" })
+  .inputValidator((i) => Session.parse(i))
+  .handler(async ({ data }) => {
+    await requireStaff(data.sessionId);
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: rows, error } = await supabaseAdmin
+      .from("appointments")
+      .select("id, scheduled_time, appointment_type, status, created_by, clients(full_name)")
+      .eq("scheduled_date", today)
+      .order("scheduled_time");
+    if (error) dbError(error);
+    return rows ?? [];
+  });
+
