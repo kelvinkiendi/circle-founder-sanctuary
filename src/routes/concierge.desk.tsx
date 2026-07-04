@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Layout, PageHeader } from "@/components/Layout";
 import { RequireRole, useSession } from "@/lib/session";
 import { PortalTabs, type PortalTab } from "@/components/PortalTabs";
 import { CAN, apptSource, APPT_SOURCE_LABEL, APPT_SOURCE_CLASS } from "@/lib/permissions";
 import { Search, UserPlus, Calendar, CreditCard } from "lucide-react";
 import { useState } from "react";
+import { listRegistryClientsFn, getTodayAppointmentsFn } from "@/lib/admin-registry.functions";
+
 
 // Lifted feature sections
 import { Registry } from "@/_archive/routes/registry";
