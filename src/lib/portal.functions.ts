@@ -127,7 +127,9 @@ export const createClientFn = createServerFn({ method: "POST" })
     reminder_interval_days: z.number().int().min(1).max(365).optional(),
   }).parse(i))
   .handler(async ({ data }) => {
-    const staff = await requireStaff(data.sessionId);
+    // Admin, manager, reception and technicians may register clients.
+    // Guardian/partner are read-only and are rejected here.
+    const staff = await requireStaff(data.sessionId, [...BOOKING_ROLES]);
     const createdBy = `${staff.role === "reception" ? "reception" : staff.role === "technician" ? "tech" : staff.role}:${staff.staff_id}`;
     const { data: row, error } = await supabaseAdmin.from("clients").insert({
       full_name: data.full_name,
