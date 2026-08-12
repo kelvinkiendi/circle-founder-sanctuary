@@ -5,6 +5,9 @@ import { requireStaff, dbError } from "@/lib/staff-auth.server";
 
 const Session = z.object({ sessionId: z.string().uuid() });
 
+/** Roles allowed to create clients and book appointments (guardian/partner stay read-only). */
+const BOOKING_ROLES = ["admin", "manager", "reception", "technician"] as const;
+
 // ============ Dashboard ============
 
 export const getDashboardStatsFn = createServerFn({ method: "POST" })
@@ -127,7 +130,9 @@ export const createClientFn = createServerFn({ method: "POST" })
     reminder_interval_days: z.number().int().min(1).max(365).optional(),
   }).parse(i))
   .handler(async ({ data }) => {
-    const staff = await requireStaff(data.sessionId);
+    // Admin, manager, reception and technicians may register clients.
+    // Guardian/partner are read-only and are rejected here.
+    const staff = await requireStaff(data.sessionId, [...BOOKING_ROLES]);
     const createdBy = `${staff.role === "reception" ? "reception" : staff.role === "technician" ? "tech" : staff.role}:${staff.staff_id}`;
     const { data: row, error } = await supabaseAdmin.from("clients").insert({
       full_name: data.full_name,
@@ -274,7 +279,7 @@ const APPOINTMENT_TYPES = new Set([
 export const createAppointmentFn = createServerFn({ method: "POST" })
   .inputValidator((i) => Session.extend({ appt: AppointmentInsert }).parse(i))
   .handler(async ({ data }) => {
-    await requireStaff(data.sessionId);
+    await requireStaff(data.sessionId, [...BOOKING_ROLES]);
     const appt: any = { ...data.appt };
     // Coerce free-form service slugs (e.g. "gel_manicure") to a valid enum,
     // preserving the original label in service_description.

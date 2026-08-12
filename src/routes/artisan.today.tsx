@@ -10,7 +10,6 @@ import {
   Wallet, Smartphone, Banknote, Trash2,
 } from "lucide-react";
 import { normalizeKePhone } from "@/lib/phone";
-import { supabase } from "@/integrations/supabase/client";
 import { initiateMpesaStkPush, recordCashPayment, addPaymentLineItems } from "@/lib/payments.functions";
 import { sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { ArtisanEarnings } from "@/components/ArtisanEarnings";
@@ -901,15 +900,13 @@ function Step2Service({
 // ============ Step 3: Perks ============
 function Step3Perks({ client, service, date, perkRedeem, setPerkRedeem, onBack, onNext }: any) {
   const isFounder = client.client_type === "founder";
+  const { session } = useSession();
+  const fetchFounder = useServerFn(getFounderWithPerksFn);
 
   const { data: founder } = useQuery({
-    queryKey: ["founder-of", client.id],
-    queryFn: async () => {
-      if (!isFounder) return null;
-      const { data } = await supabase.from("founder_circle").select("*, perks_usage(*)").eq("client_id", client.id).maybeSingle();
-      return data;
-    },
-    enabled: isFounder,
+    queryKey: ["founder-of", client.id, session?.sessionId],
+    queryFn: () => fetchFounder({ data: { sessionId: session!.sessionId, clientId: client.id } }),
+    enabled: isFounder && !!session?.sessionId,
   });
 
   if (!isFounder) {
