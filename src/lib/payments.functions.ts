@@ -356,6 +356,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
     line_items?: Array<{ service_id?: string | null; service_name: string; quantity: number; unit_price: number }>;
     created_by?: string;
     method?: "cash" | "card";
+    reference?: string | null;
   }) =>
     z.object({
       ...SessionField,
@@ -372,6 +373,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
       })).optional(),
       created_by: z.string().optional(),
       method: z.enum(["cash", "card"]).optional(),
+      reference: z.string().max(60).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data }) => {
@@ -386,7 +388,9 @@ export const recordCashPayment = createServerFn({ method: "POST" })
       phone: isCard ? "CARD" : "CASH",
       status: "paid",
       paid_at: new Date().toISOString(),
-      mpesa_receipt_number: `${isCard ? "CARD" : "CASH"}-${receiptNo.slice(-4)}`,
+      mpesa_receipt_number: data.reference?.trim()
+        ? `${isCard ? "CARD" : "CASH"}-${data.reference.trim()}`
+        : `${isCard ? "CARD" : "CASH"}-${receiptNo.slice(-4)}`,
       description: data.description ?? (isCard ? "Card payment" : "Cash payment"),
       related_appointment_id: data.related_appointment_id ?? null,
       created_by: data.created_by ?? null,
