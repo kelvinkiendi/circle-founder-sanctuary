@@ -279,7 +279,7 @@ const APPOINTMENT_TYPES = new Set([
 export const createAppointmentFn = createServerFn({ method: "POST" })
   .inputValidator((i) => Session.extend({ appt: AppointmentInsert }).parse(i))
   .handler(async ({ data }) => {
-    await requireStaff(data.sessionId);
+    await requireStaff(data.sessionId, [...BOOKING_ROLES]);
     const appt: any = { ...data.appt };
     // Coerce free-form service slugs (e.g. "gel_manicure") to a valid enum,
     // preserving the original label in service_description.
