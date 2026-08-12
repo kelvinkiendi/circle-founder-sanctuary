@@ -13,6 +13,7 @@ import { Route as ChangePinRouteImport } from './routes/change-pin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GuardianViewRouteImport } from './routes/guardian.view'
 import { Route as ConciergeDeskRouteImport } from './routes/concierge.desk'
+import { Route as BillingCheckoutRouteImport } from './routes/billing.checkout'
 import { Route as ArtisanTodayRouteImport } from './routes/artisan.today'
 import { Route as AdminPartnersRouteImport } from './routes/admin.partners'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa.callback'
@@ -36,6 +37,11 @@ const GuardianViewRoute = GuardianViewRouteImport.update({
 const ConciergeDeskRoute = ConciergeDeskRouteImport.update({
   id: '/concierge/desk',
   path: '/concierge/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingCheckoutRoute = BillingCheckoutRouteImport.update({
+  id: '/billing/checkout',
+  path: '/billing/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ArtisanTodayRoute = ArtisanTodayRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/change-pin': typeof ChangePinRoute
   '/admin/partners': typeof AdminPartnersRoute
   '/artisan/today': typeof ArtisanTodayRoute
+  '/billing/checkout': typeof BillingCheckoutRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/change-pin': typeof ChangePinRoute
   '/admin/partners': typeof AdminPartnersRoute
   '/artisan/today': typeof ArtisanTodayRoute
+  '/billing/checkout': typeof BillingCheckoutRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/change-pin': typeof ChangePinRoute
   '/admin/partners': typeof AdminPartnersRoute
   '/artisan/today': typeof ArtisanTodayRoute
+  '/billing/checkout': typeof BillingCheckoutRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/change-pin'
     | '/admin/partners'
     | '/artisan/today'
+    | '/billing/checkout'
     | '/concierge/desk'
     | '/guardian/view'
     | '/api/public/hooks/visit-reminders-21d'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/change-pin'
     | '/admin/partners'
     | '/artisan/today'
+    | '/billing/checkout'
     | '/concierge/desk'
     | '/guardian/view'
     | '/api/public/hooks/visit-reminders-21d'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/change-pin'
     | '/admin/partners'
     | '/artisan/today'
+    | '/billing/checkout'
     | '/concierge/desk'
     | '/guardian/view'
     | '/api/public/hooks/visit-reminders-21d'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   ChangePinRoute: typeof ChangePinRoute
   AdminPartnersRoute: typeof AdminPartnersRoute
   ArtisanTodayRoute: typeof ArtisanTodayRoute
+  BillingCheckoutRoute: typeof BillingCheckoutRoute
   ConciergeDeskRoute: typeof ConciergeDeskRoute
   GuardianViewRoute: typeof GuardianViewRoute
   ApiPublicHooksVisitReminders21dRoute: typeof ApiPublicHooksVisitReminders21dRoute
@@ -163,6 +176,13 @@ declare module '@tanstack/react-router' {
       path: '/concierge/desk'
       fullPath: '/concierge/desk'
       preLoaderRoute: typeof ConciergeDeskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing/checkout': {
+      id: '/billing/checkout'
+      path: '/billing/checkout'
+      fullPath: '/billing/checkout'
+      preLoaderRoute: typeof BillingCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/artisan/today': {
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChangePinRoute: ChangePinRoute,
   AdminPartnersRoute: AdminPartnersRoute,
   ArtisanTodayRoute: ArtisanTodayRoute,
+  BillingCheckoutRoute: BillingCheckoutRoute,
   ConciergeDeskRoute: ConciergeDeskRoute,
   GuardianViewRoute: GuardianViewRoute,
   ApiPublicHooksVisitReminders21dRoute: ApiPublicHooksVisitReminders21dRoute,
