@@ -7,10 +7,10 @@ import { toast } from "sonner";
 import {
   Plus, X, Search, Calendar, Clock, MapPin, Gift, Sparkles, Plane,
   Coffee, AlertTriangle, CheckCircle2, ChevronRight, Repeat, LogOut, Lock, User,
-  Wallet, Smartphone, Banknote, Trash2,
+  Wallet, Smartphone, Banknote,
 } from "lucide-react";
 import { normalizeKePhone } from "@/lib/phone";
-import { initiateMpesaStkPush, recordCashPayment, addPaymentLineItems } from "@/lib/payments.functions";
+
 import { sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { ArtisanEarnings } from "@/components/ArtisanEarnings";
 import {
