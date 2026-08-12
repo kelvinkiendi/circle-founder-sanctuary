@@ -5,6 +5,9 @@ import { requireStaff, dbError } from "@/lib/staff-auth.server";
 
 const Session = z.object({ sessionId: z.string().uuid() });
 
+/** Roles allowed to create clients and book appointments (guardian/partner stay read-only). */
+const BOOKING_ROLES = ["admin", "manager", "reception", "technician"] as const;
+
 // ============ Dashboard ============
 
 export const getDashboardStatsFn = createServerFn({ method: "POST" })
