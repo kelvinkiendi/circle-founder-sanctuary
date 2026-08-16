@@ -18,6 +18,7 @@ import { Route as ArtisanTodayRouteImport } from './routes/artisan.today'
 import { Route as AdminPartnersRouteImport } from './routes/admin.partners'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa.callback'
+import { Route as ApiPublicHooksWhatsappDispatchRouteImport } from './routes/api/public/hooks/whatsapp-dispatch'
 import { Route as ApiPublicHooksVisitReminders21dRouteImport } from './routes/api/public/hooks/visit-reminders-21d'
 
 const ChangePinRoute = ChangePinRouteImport.update({
@@ -66,6 +67,12 @@ const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
   path: '/api/public/mpesa/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksWhatsappDispatchRoute =
+  ApiPublicHooksWhatsappDispatchRouteImport.update({
+    id: '/api/public/hooks/whatsapp-dispatch',
+    path: '/api/public/hooks/whatsapp-dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksVisitReminders21dRoute =
   ApiPublicHooksVisitReminders21dRouteImport.update({
     id: '/api/public/hooks/visit-reminders-21d',
@@ -82,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
+  '/api/public/hooks/whatsapp-dispatch': typeof ApiPublicHooksWhatsappDispatchRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
@@ -94,6 +102,7 @@ export interface FileRoutesByTo {
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
+  '/api/public/hooks/whatsapp-dispatch': typeof ApiPublicHooksWhatsappDispatchRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
@@ -107,6 +116,7 @@ export interface FileRoutesById {
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
+  '/api/public/hooks/whatsapp-dispatch': typeof ApiPublicHooksWhatsappDispatchRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/concierge/desk'
     | '/guardian/view'
     | '/api/public/hooks/visit-reminders-21d'
+    | '/api/public/hooks/whatsapp-dispatch'
     | '/api/public/mpesa/callback'
     | '/api/public/whatsapp/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/concierge/desk'
     | '/guardian/view'
     | '/api/public/hooks/visit-reminders-21d'
+    | '/api/public/hooks/whatsapp-dispatch'
     | '/api/public/mpesa/callback'
     | '/api/public/whatsapp/webhook'
   id:
@@ -145,6 +157,7 @@ export interface FileRouteTypes {
     | '/concierge/desk'
     | '/guardian/view'
     | '/api/public/hooks/visit-reminders-21d'
+    | '/api/public/hooks/whatsapp-dispatch'
     | '/api/public/mpesa/callback'
     | '/api/public/whatsapp/webhook'
   fileRoutesById: FileRoutesById
@@ -158,6 +171,7 @@ export interface RootRouteChildren {
   ConciergeDeskRoute: typeof ConciergeDeskRoute
   GuardianViewRoute: typeof GuardianViewRoute
   ApiPublicHooksVisitReminders21dRoute: typeof ApiPublicHooksVisitReminders21dRoute
+  ApiPublicHooksWhatsappDispatchRoute: typeof ApiPublicHooksWhatsappDispatchRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
 }
@@ -227,6 +241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMpesaCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/whatsapp-dispatch': {
+      id: '/api/public/hooks/whatsapp-dispatch'
+      path: '/api/public/hooks/whatsapp-dispatch'
+      fullPath: '/api/public/hooks/whatsapp-dispatch'
+      preLoaderRoute: typeof ApiPublicHooksWhatsappDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/visit-reminders-21d': {
       id: '/api/public/hooks/visit-reminders-21d'
       path: '/api/public/hooks/visit-reminders-21d'
@@ -246,6 +267,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConciergeDeskRoute: ConciergeDeskRoute,
   GuardianViewRoute: GuardianViewRoute,
   ApiPublicHooksVisitReminders21dRoute: ApiPublicHooksVisitReminders21dRoute,
+  ApiPublicHooksWhatsappDispatchRoute: ApiPublicHooksWhatsappDispatchRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
 }
