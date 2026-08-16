@@ -39,7 +39,7 @@ scheduling, product pre-launch access, surprise moments, and founder brunch even
 
 
 ## 📁 Project Structure
-
+```
 
 ---
 ├── src/
@@ -52,7 +52,7 @@ scheduling, product pre-launch access, surprise moments, and founder brunch even
 ├── public/                 # Static assets
 └── package.json
 ---
-
+```
 ## 🛠 Tech Stack
 
 | Layer | Technology |
