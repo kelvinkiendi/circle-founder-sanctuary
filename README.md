@@ -1,54 +1,108 @@
-# The Circle Sanctuary
+# Circle Founder Sanctuary
 
-Build "The Circle" — a luxury nail studio POS system for COTERIE Nail Sanctuary with a rich brown and cream color palette (elegant, minimal, spa-like aesthetic).
+**Stack:** PostgreSQL · Supabase · React · TypeScript · Tailwind CSS
 
-Create the database schema in Supabase with these tables:
+B2B membership management system for COTERIE Nail Sanctuary's exclusive **Founder Circle** — 
+a luxury tiered program limited to 25 members. Handles enrollment, perks tracking, appointment 
+scheduling, product pre-launch access, surprise moments, and founder brunch events.
 
-1. clients table: id, full_name, phone, email, whatsapp_number, birthday, address, service_area, client_type (regular/founder), status (active/inactive), created_at, notes
+---
 
-2. founder_circle table: id, client_id (FK), enrollment_date, term_end_date, enrollment_fee_paid (boolean), payment_method (full/installment), installment_count, total_paid_ksh, status (active/expired/pending), founder_number (1-25), referral_count, total_spend, engagement_score
+## 🏗 Backend Architecture
 
-3. appointments table: id, client_id (FK), appointment_type (weekly_refresh/gel_rescue/travel_touchup/full_manicure/pedicure/surprise_full/random_upgrade/birthday_sanctuary/emergency), scheduled_date, scheduled_time, duration_minutes, status (booked/completed/no-show/cancelled/forfeited), location (studio/travel), notes, created_by, created_at
+### Database Layer (PostgreSQL + Supabase)
+- **9 normalized tables** with foreign key relationships
+- Row Level Security (RLS) policies for data isolation
+- Automated triggers for perks expiry and engagement scoring
 
-4. perks_usage table: id, founder_id (FK), perk_type (weekly_refresh/gel_rescue/travel_touchup/surprise_full/birthday_sanctuary/random_upgrade/just_because), week_number (for weekly), month_number (for travel), used_date, expiry_date, status (available/used/expired/forfeited), related_appointment_id
+### Core Tables
 
-5. surprise_moments_log table: id, founder_id (FK), surprise_type, awarded_date, awarded_reason, related_appointment_id, documented_by, created_at
+| Table | Purpose |
+|-------|---------|
+| `clients` | Member profiles with client type (regular/founder), contact info, status |
+| `founder_circle` | Enrollment tracking, payment status, term dates, founder number (1-25) |
+| `appointments` | Specialized booking types: weekly refresh, gel rescue, travel touchup, birthday sanctuary, emergency |
+| `perks_usage` | Perk redemption tracking with week/month allocation and expiry |
+| `surprise_moments_log` | Documented surprise rewards and random upgrades |
+| `products` | Product catalog with founder pricing (cost + 20%), prelaunch access |
+| `founder_purchases` | Purchase history with prelaunch window tracking |
+| `founder_brunch_events` | Exclusive event management |
+| `brunch_attendance` | RSVP tracking with dietary notes and photo consent |
 
-6. products table: id, name, category (cuticle_oil/shoe_horn/gloves/magnetic_clasp), cost_price, founder_price (cost + 20%), retail_price, stock_quantity, launch_status (prelaunch/public)
+### Business Logic
+- **Founder limit enforcement:** Hard cap of 25 active founders
+- **Perk allocation:** Weekly refreshes, travel touchups, surprise moments auto-assigned
+- **Engagement scoring:** Automated scoring based on appointment frequency and purchases
+- **Referral tracking:** Referral count linked to founder rewards
 
-7. founder_purchases table: id, founder_id (FK), product_id (FK), quantity, price_applied, purchase_date, prelaunch_window (boolean)
+---
 
-8. founder_brunch_events table: id, event_name, event_date, venue, status, created_at
 
-9. brunch_attendance table: id, event_id (FK), founder_id (FK), attendance_status (confirmed/attended/no_show), dietary_notes, photo_consent (boolean)
+## 📁 Project Structure
+# Circle Founder Sanctuary
 
-Build the main dashboard layout with:
+**Stack:** PostgreSQL · Supabase · React · TypeScript · Tailwind CSS
 
-- Sidebar navigation: Dashboard, All Clients, The Circle (Founders), Appointments, Perks Tracker, Surprise Moments, Product Vault, Founder Brunch, Settings
+B2B membership management system for COTERIE Nail Sanctuary's exclusive **Founder Circle** — 
+a luxury tiered program limited to 25 members. Handles enrollment, perks tracking, appointment 
+scheduling, product pre-launch access, surprise moments, and founder brunch events.
 
-- Top bar with COTERIE logo, search, notifications bell
+---
 
-- Stats cards showing: Total Clients, Active Founders (max 25), Today's Appointments, Weekly Refreshes Used This Week
+## 🏗 Backend Architecture
 
-- Use brown (#5D4037) and cream (#F5F5DC) as primary colors with gold accents
+### Database Layer (PostgreSQL + Supabase)
+- **9 normalized tables** with foreign key relationships
+- Row Level Security (RLS) policies for data isolation
+- Automated triggers for perks expiry and engagement scoring
 
-This project was built with [Lovable](https://lovable.dev).
+### Core Tables
 
-## Build with Lovable
+| Table | Purpose |
+|-------|---------|
+| `clients` | Member profiles with client type (regular/founder), contact info, status |
+| `founder_circle` | Enrollment tracking, payment status, term dates, founder number (1-25) |
+| `appointments` | Specialized booking types: weekly refresh, gel rescue, travel touchup, birthday sanctuary, emergency |
+| `perks_usage` | Perk redemption tracking with week/month allocation and expiry |
+| `surprise_moments_log` | Documented surprise rewards and random upgrades |
+| `products` | Product catalog with founder pricing (cost + 20%), prelaunch access |
+| `founder_purchases` | Purchase history with prelaunch window tracking |
+| `founder_brunch_events` | Exclusive event management |
+| `brunch_attendance` | RSVP tracking with dietary notes and photo consent |
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/92830508-2d42-4b94-a8dc-89e6862170dd).
+### Business Logic
+- **Founder limit enforcement:** Hard cap of 25 active founders
+- **Perk allocation:** Weekly refreshes, travel touchups, surprise moments auto-assigned
+- **Engagement scoring:** Automated scoring based on appointment frequency and purchases
+- **Referral tracking:** Referral count linked to founder rewards
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+---
 
-## Development
+## 📁 Project Structure
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React, TypeScript, Tailwind CSS, Vite |
+| UI Theme | Custom brown (#5D4037) & cream (#F5F5DC) with gold accents |
+| Database | PostgreSQL (Supabase) |
+| Auth | Supabase Auth |
+| Deployment | Supabase Cloud |
+
+---
+
+## 🚀 Getting Started
+
+```bash
+# Clone
+git clone https://github.com/kelvinkiendi/circle-founder-sanctuary.git
+
+# Install dependencies
+npm install
+
+# Start dev server
 npm run dev
-```
