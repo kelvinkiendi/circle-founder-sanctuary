@@ -204,7 +204,7 @@ export const setWhatsAppConsentFn = createServerFn({ method: "POST" })
     }
     if (Object.keys(patch).length === 0) return { ok: true };
 
-    const { error } = await supabaseAdmin.from("clients").update(patch).eq("id", data.clientId);
+    const { error } = await supabaseAdmin.from("clients").update(patch as never).eq("id", data.clientId);
     if (error) dbError(error, "wa_consent");
     return { ok: true };
   });
