@@ -20,6 +20,7 @@ import { ProductVaultPage } from "@/_archive/routes/products";
 import { BrunchPage } from "@/_archive/routes/brunch";
 import { PaymentsPage } from "@/_archive/routes/payments";
 import { WhatsAppHub } from "@/_archive/routes/whatsapp";
+import { WhatsAppCenter } from "@/components/whatsapp/WhatsAppCenter";
 import { SettingsPage } from "@/_archive/routes/settings";
 import { ServicesPage } from "@/_archive/routes/services";
 
@@ -50,6 +51,7 @@ function DeskShell() {
       { id: "brunch", label: "Brunch", render: () => <BrunchPage /> },
       { id: "payments", label: "Payments", render: () => <PaymentsPage /> },
       { id: "whatsapp", label: "WhatsApp", render: () => <WhatsAppHub /> },
+      { id: "wa-business", label: "WA Business", render: () => <WhatsAppCenter /> },
       CAN.changeSettings(role)
         ? { id: "services", label: "Services", render: () => <ServicesPage /> }
         : null,

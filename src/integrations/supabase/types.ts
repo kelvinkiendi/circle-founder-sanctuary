@@ -188,7 +188,10 @@ export type Database = {
           service_area: string | null
           status: Database["public"]["Enums"]["client_status"]
           whatsapp_number: string | null
+          whatsapp_opt_in: boolean
+          whatsapp_opt_in_at: string | null
           whatsapp_opt_out: boolean
+          whatsapp_prefs: Json
         }
         Insert: {
           address?: string | null
@@ -211,7 +214,10 @@ export type Database = {
           service_area?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           whatsapp_number?: string | null
+          whatsapp_opt_in?: boolean
+          whatsapp_opt_in_at?: string | null
           whatsapp_opt_out?: boolean
+          whatsapp_prefs?: Json
         }
         Update: {
           address?: string | null
@@ -234,7 +240,10 @@ export type Database = {
           service_area?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           whatsapp_number?: string | null
+          whatsapp_opt_in?: boolean
+          whatsapp_opt_in_at?: string | null
           whatsapp_opt_out?: boolean
+          whatsapp_prefs?: Json
         }
         Relationships: [
           {
@@ -1006,6 +1015,81 @@ export type Database = {
           },
         ]
       }
+      whatsapp_logs: {
+        Row: {
+          body_text: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          error_message: string | null
+          founder_id: string | null
+          id: string
+          language: string
+          meta_message_id: string | null
+          parameters: Json
+          queued_at: string
+          read_at: string | null
+          recipient_phone: string
+          sent_at: string | null
+          status: string
+          template_name: string
+        }
+        Insert: {
+          body_text?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          founder_id?: string | null
+          id?: string
+          language?: string
+          meta_message_id?: string | null
+          parameters?: Json
+          queued_at?: string
+          read_at?: string | null
+          recipient_phone: string
+          sent_at?: string | null
+          status?: string
+          template_name: string
+        }
+        Update: {
+          body_text?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          founder_id?: string | null
+          id?: string
+          language?: string
+          meta_message_id?: string | null
+          parameters?: Json
+          queued_at?: string
+          read_at?: string | null
+          recipient_phone?: string
+          sent_at?: string | null
+          status?: string
+          template_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_logs_founder_id_fkey"
+            columns: ["founder_id"]
+            isOneToOne: false
+            referencedRelation: "founder_circle"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_messages: {
         Row: {
           appointment_id: string | null
@@ -1054,6 +1138,48 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_templates: {
+        Row: {
+          body_text: string
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_critical: boolean
+          language: string
+          template_name: string
+          updated_at: string
+          variables: string[]
+          variables_count: number
+        }
+        Insert: {
+          body_text: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_critical?: boolean
+          language?: string
+          template_name: string
+          updated_at?: string
+          variables?: string[]
+          variables_count?: number
+        }
+        Update: {
+          body_text?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_critical?: boolean
+          language?: string
+          template_name?: string
+          updated_at?: string
+          variables?: string[]
+          variables_count?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1078,6 +1204,16 @@ export type Database = {
           session_id: string
           staff_id: string
         }[]
+      }
+      queue_whatsapp: {
+        Args: {
+          p_category?: string
+          p_client_id: string
+          p_founder_id?: string
+          p_params: Json
+          p_template: string
+        }
+        Returns: string
       }
       record_failed_pin: { Args: { p_pin: string }; Returns: undefined }
       record_staff_earnings_for_payment: {
