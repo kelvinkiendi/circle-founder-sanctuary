@@ -42,9 +42,15 @@ scheduling, product pre-launch access, surprise moments, and founder brunch even
 
 
 ---
-
-
-
+├── src/
+│   ├── components/         # React components (dashboard, sidebar, stats cards)
+│   ├── pages/              # Route pages (Clients, Circle, Appointments, Perks, etc.)
+│   ├── hooks/              # Custom React hooks
+│   └── lib/                # Utilities and API clients
+├── supabase/
+│   └── migrations/         # PostgreSQL schema and policies
+├── public/                 # Static assets
+└── package.json
 ---
 
 ## 🛠 Tech Stack
