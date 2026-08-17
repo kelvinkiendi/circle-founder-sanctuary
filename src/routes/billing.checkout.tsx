@@ -16,7 +16,7 @@ type Search = { clientId?: string; apptId?: string };
 
 export const Route = createFileRoute("/billing/checkout")({
   component: () => (
-    <RequireRole roles={["technician", "admin", "manager", "reception"]}>
+    <RequireRole roles={["admin", "manager", "reception"]}>
       <CheckoutPage />
     </RequireRole>
   ),

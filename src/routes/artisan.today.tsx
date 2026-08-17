@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -7,17 +7,16 @@ import { toast } from "sonner";
 import {
   Plus, X, Search, Calendar, Clock, MapPin, Gift, Sparkles, Plane,
   Coffee, AlertTriangle, CheckCircle2, ChevronRight, Repeat, LogOut, Lock, User,
-  Wallet, Smartphone, Banknote,
 } from "lucide-react";
 import { normalizeKePhone } from "@/lib/phone";
 
 import { sendWhatsAppMessage } from "@/lib/whatsapp.functions";
 import { ArtisanEarnings } from "@/components/ArtisanEarnings";
 import {
-  getArtisanAppointmentsFn, getArtisanCollectionFn, searchClientsFn,
+  getArtisanAppointmentsFn, searchClientsFn,
   getClientByIdFn, getFirstClientIdFn, createClientFn, createNotificationFn,
   getFounderWithPerksFn, createAppointmentFn, redeemPerkFn, logActivityFn,
-  getActiveServicesFn,
+  getActiveServicesFn, completeAppointmentFn,
 } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/artisan/today")({
@@ -56,9 +55,6 @@ const BLOCKED_REASONS = ["Lunch Break", "Personal Appointment", "Sick Leave", "T
 function ArtisanScheduler() {
   const { session, logout } = useSession();
   const [sheet, setSheet] = useState<"new" | "block" | null>(null);
-  const router = useRouter();
-  const goCheckout = (opts?: { clientId?: string; apptId?: string }) =>
-    router.navigate({ to: "/billing/checkout", search: { clientId: opts?.clientId, apptId: opts?.apptId } as any });
   const [rebookClientId, setRebookClientId] = useState<string | null>(null);
   const [rebookService, setRebookService] = useState<ServiceType | null>(null);
   const techTag = `tech:${session?.staffId ?? ""}`;
@@ -66,6 +62,16 @@ function ArtisanScheduler() {
 
   const qc = useQueryClient();
   const fetchAppts = useServerFn(getArtisanAppointmentsFn);
+  const completeFn = useServerFn(completeAppointmentFn);
+  const completeAppt = async (id: string) => {
+    try {
+      await completeFn({ data: { sessionId: session!.sessionId, appointmentId: id, status: "completed" } });
+      toast.success("Service completed");
+      qc.invalidateQueries({ queryKey: ["artisan-appts"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not update appointment");
+    }
+  };
   const { data: appts } = useQuery({
     queryKey: ["artisan-appts", techTag, today, session?.sessionId],
     enabled: !!session?.sessionId,
@@ -90,9 +96,6 @@ function ArtisanScheduler() {
       </header>
 
       <main className="px-4 pb-32 pt-4 space-y-6 max-w-xl mx-auto">
-        {/* Today's Collection */}
-        <CollectionSummary techTag={techTag} today={today} />
-
         {/* My Earnings */}
         {session?.staffId && <ArtisanEarnings staffId={session.staffId} />}
 
@@ -114,7 +117,7 @@ function ArtisanScheduler() {
                 key={a.id}
                 appt={a}
                 onRebook={() => { setRebookClientId(a.client_id); setRebookService(a.appointment_type); setSheet("new"); }}
-                onBill={() => goCheckout({ clientId: a.client_id, apptId: a.id })}
+                onComplete={completeAppt}
               />
             ))}
           </div>
@@ -142,12 +145,6 @@ function ArtisanScheduler() {
           className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037]/30 rounded-full px-3 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
         >
           <Coffee className="h-3.5 w-3.5" /> Block
-        </button>
-        <button
-          onClick={() => goCheckout()}
-          className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037] rounded-full px-4 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
-        >
-          <Wallet className="h-4 w-4" /> Bill Client
         </button>
         <button
           onClick={() => { setRebookClientId(null); setRebookService(null); setSheet("new"); }}
@@ -179,55 +176,8 @@ function ArtisanScheduler() {
 }
 
 // ============ Today's Collection Summary ============
-function CollectionSummary({ techTag, today }: { techTag: string; today: string }) {
-  const { session } = useSession();
-  const fetchCollection = useServerFn(getArtisanCollectionFn);
-  const [expanded, setExpanded] = useState(false);
-  const { data } = useQuery({
-    queryKey: ["artisan-collection", techTag, today, session?.sessionId],
-    enabled: !!session?.sessionId,
-    queryFn: () => fetchCollection({ data: { sessionId: session!.sessionId, techTag, today } }),
-    refetchInterval: 30_000,
-  });
-  const rows = data ?? [];
-  const cash = rows.filter((p: any) => p.phone === "CASH").reduce((s: number, p: any) => s + Number(p.amount_ksh), 0);
-  const mpesa = rows.filter((p: any) => p.phone !== "CASH").reduce((s: number, p: any) => s + Number(p.amount_ksh), 0);
-  const total = cash + mpesa;
-
-  return (
-    <section className="bg-[#5D4037] text-[#F5F5DC] rounded-xl p-4 shadow-md">
-      <div className="flex items-center gap-3">
-        <Wallet className="h-5 w-5" />
-        <div className="flex-1">
-          <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">Today's Collection</div>
-          <div className="font-display text-2xl">KSH {total.toLocaleString()}</div>
-        </div>
-        <button onClick={() => setExpanded(!expanded)} className="text-[11px] uppercase tracking-wider underline">
-          {expanded ? "Hide" : "Details"}
-        </button>
-      </div>
-      <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-        <div className="bg-white/10 rounded p-2 flex items-center gap-2"><Smartphone className="h-3.5 w-3.5" /> M-Pesa: KSH {mpesa.toLocaleString()}</div>
-        <div className="bg-white/10 rounded p-2 flex items-center gap-2"><Banknote className="h-3.5 w-3.5" /> Cash: KSH {cash.toLocaleString()}</div>
-      </div>
-      {expanded && (
-        <ul className="mt-3 space-y-1 text-xs max-h-40 overflow-y-auto">
-          {rows.length === 0 && <li className="opacity-60 italic">No collections yet today.</li>}
-          {rows.map((p: any) => (
-            <li key={p.id} className="flex items-center gap-2 bg-white/5 rounded px-2 py-1.5">
-              <span className="font-mono opacity-70 text-[10px]">{p.mpesa_receipt_number ?? "—"}</span>
-              <span className="flex-1 truncate">{p.description ?? "Service"}</span>
-              <span>KSH {Number(p.amount_ksh).toLocaleString()}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 // ============ Appointment Card ============
-function ApptCard({ appt, onRebook, onBill, compact }: { appt: any; onRebook: () => void; onBill?: () => void; compact?: boolean }) {
+function ApptCard({ appt, onRebook, onComplete, compact }: { appt: any; onRebook: () => void; onComplete?: (id: string) => void; compact?: boolean }) {
   const meta = SERVICE_META[appt.appointment_type as ServiceType];
   const isBlock = String(appt.notes ?? "").startsWith("[BLOCK]");
   return (
@@ -256,9 +206,9 @@ function ApptCard({ appt, onRebook, onBill, compact }: { appt: any; onRebook: ()
             <button onClick={onRebook} className="text-[10px] uppercase tracking-wider text-[#5D4037] flex items-center gap-1 px-2 py-1 rounded hover:bg-[#5D4037]/5">
               <Repeat className="h-3 w-3" /> Rebook
             </button>
-            {onBill && (
-              <button onClick={onBill} className="text-[10px] uppercase tracking-wider text-[#F5F5DC] bg-[#5D4037] flex items-center gap-1 px-2 py-1 rounded">
-                <Wallet className="h-3 w-3" /> Bill
+            {onComplete && appt.status !== "completed" && (
+              <button onClick={() => onComplete(appt.id)} className="text-[10px] uppercase tracking-wider text-[#F5F5DC] bg-[#5D4037] flex items-center gap-1 px-2 py-1 rounded">
+                <CheckCircle2 className="h-3 w-3" /> Complete
               </button>
             )}
           </div>
