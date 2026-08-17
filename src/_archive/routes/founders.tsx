@@ -25,7 +25,11 @@ import {
   CircleDot,
   Search,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { useSession } from "@/lib/session";
+import {
+  listFoundersFn, searchClientsForEnrollmentFn, enrollFounderFn, getCircleCapacityFn,
+} from "@/lib/founders.functions";
 import { Layout, PageHeader } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -90,17 +94,15 @@ function fmtDate(d?: string | null) {
 export function FoundersPage() {
   const [selected, setSelected] = useState<Founder | null>(null);
   const [enrollOpen, setEnrollOpen] = useState(false);
+  const { session } = useSession();
+  const sessionId = session?.sessionId ?? "";
+  const listFounders = useServerFn(listFoundersFn);
 
   const { data: founders } = useQuery({
-    queryKey: ["founders-grid"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("founder_circle")
-        .select("*, clients(*)")
-        .order("founder_number", { ascending: true, nullsFirst: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as Founder[];
-    },
+    queryKey: ["founders-grid", sessionId],
+    enabled: !!sessionId,
+    queryFn: async () =>
+      (await listFounders({ data: { sessionId } })) as unknown as Founder[],
   });
 
   const byNumber = useMemo(() => {
@@ -748,6 +750,16 @@ function EnrollFounderDialog({
   takenNumbers: Set<number>;
 }) {
   const qc = useQueryClient();
+  const { session } = useSession();
+  const sessionId = session?.sessionId ?? "";
+  const searchClients = useServerFn(searchClientsForEnrollmentFn);
+  const enrollFn = useServerFn(enrollFounderFn);
+  const capacityFn = useServerFn(getCircleCapacityFn);
+  const { data: capacity } = useQuery({
+    queryKey: ["circle-capacity", sessionId, open],
+    enabled: !!sessionId && open,
+    queryFn: () => capacityFn({ data: { sessionId } }),
+  });
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [clientId, setClientId] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -768,14 +780,10 @@ function EnrollFounderDialog({
   const [notes, setNotes] = useState("");
 
   const { data: clientResults } = useQuery({
-    queryKey: ["client-search", search],
-    queryFn: async () => {
-      let q = supabase.from("clients").select("id, full_name, phone").limit(8);
-      if (search) q = q.ilike("full_name", `%${search}%`);
-      const { data } = await q;
-      return data ?? [];
-    },
-    enabled: open && mode === "existing",
+    queryKey: ["client-search", sessionId, search],
+    queryFn: async () =>
+      (await searchClients({ data: { sessionId, q: search, limit: 10 } })) as any[],
+    enabled: open && mode === "existing" && !!sessionId,
   });
 
   const availableNumbers = useMemo(
@@ -787,77 +795,25 @@ function EnrollFounderDialog({
   const enroll = useMutation({
     mutationFn: async () => {
       if (!founderNumber) throw new Error("Select a founder number");
-
-      let useClientId = clientId;
-
-      if (mode === "new") {
-        if (!newClient.full_name.trim()) throw new Error("Client name is required");
-        const { data: created, error } = await supabase
-          .from("clients")
-          .insert({
-            ...newClient,
-            birthday: newClient.birthday || null,
-            client_type: "founder",
-          })
-          .select()
-          .single();
-        if (error) throw error;
-        useClientId = created.id;
-      } else {
-        if (!useClientId) throw new Error("Select an existing client");
-        await supabase.from("clients").update({ client_type: "founder" }).eq("id", useClientId);
-      }
-
-      const enrollDate = new Date(enrollmentDate);
-      const termEnd = new Date(enrollDate);
-      termEnd.setMonth(termEnd.getMonth() + 6);
-
-      const totalPaid =
-        paymentMethod === "full" ? ENROLLMENT_FEE : Number(firstInstallment || 0);
-
-      const { data: founder, error: fErr } = await supabase
-        .from("founder_circle")
-        .insert({
-          client_id: useClientId,
+      return enrollFn({
+        data: {
+          sessionId,
+          mode,
+          client_id: mode === "existing" ? clientId : undefined,
+          new_client: mode === "new" ? {
+            full_name: newClient.full_name,
+            phone: newClient.phone || undefined,
+            email: newClient.email || undefined,
+            whatsapp_number: newClient.whatsapp_number || undefined,
+            birthday: newClient.birthday || undefined,
+            address: newClient.address || undefined,
+          } : undefined,
           founder_number: Number(founderNumber),
           enrollment_date: enrollmentDate,
-          term_end_date: termEnd.toISOString().slice(0, 10),
-          enrollment_fee_paid: paymentMethod === "full",
           payment_method: paymentMethod,
-          installment_count: paymentMethod === "installment" ? 1 : 0,
-          total_paid_ksh: totalPaid,
-          status: "active",
-        })
-        .select()
-        .single();
-      if (fErr) throw fErr;
-
-      // Auto-create perk records
-      const perkRows: any[] = [];
-      for (let w = 1; w <= TERM_WEEKS; w++) {
-        perkRows.push({
-          founder_id: founder.id,
-          perk_type: "weekly_refresh",
-          week_number: w,
-          status: "available",
-        });
-      }
-      for (let m = 1; m <= TRAVEL_PER_TERM; m++) {
-        perkRows.push({
-          founder_id: founder.id,
-          perk_type: "travel_touchup",
-          month_number: m,
-          status: "available",
-        });
-      }
-      perkRows.push({
-        founder_id: founder.id,
-        perk_type: "birthday_sanctuary",
-        status: "available",
+          first_installment: Number(firstInstallment || 0),
+        },
       });
-      await supabase.from("perks_usage").insert(perkRows);
-
-      return founder;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["founders-grid"] });
@@ -889,7 +845,7 @@ function EnrollFounderDialog({
           <div className="text-[10px] tracking-[0.3em] uppercase text-gold">Enrollment</div>
           <DialogTitle className="font-display text-3xl">Enroll a Founder</DialogTitle>
           <DialogDescription>
-            Initiate a six-month founding seat. {availableNumbers.length} of {TOTAL_SLOTS} seats remain.
+            Initiate a six-month founding seat. {capacity?.remaining ?? availableNumbers.length} of {TOTAL_SLOTS} seats remain.
           </DialogDescription>
         </DialogHeader>
 
@@ -903,7 +859,7 @@ function EnrollFounderDialog({
             <div className="relative">
               <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
               <Input
-                placeholder="Search by name…"
+                placeholder="Search by name, phone or email…"
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
