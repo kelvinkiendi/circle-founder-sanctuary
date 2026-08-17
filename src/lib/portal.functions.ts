@@ -425,3 +425,27 @@ export const logWhatsAppMessageFn = createServerFn({ method: "POST" })
     if (error) dbError(error);
     return { ok: true };
   });
+
+// ============ Service completion (Nail Tech workflow — no billing) ============
+
+export const completeAppointmentFn = createServerFn({ method: "POST" })
+  .inputValidator((i) => Session.extend({
+    appointmentId: z.string().uuid(),
+    status: z.enum(["booked", "completed", "no-show", "cancelled"]),
+    notes: z.string().max(800).optional(),
+  }).parse(i))
+  .handler(async ({ data }) => {
+    const staff = await requireStaff(data.sessionId, [...BOOKING_ROLES]);
+    const { data: appt } = await supabaseAdmin
+      .from("appointments").select("id, created_by").eq("id", data.appointmentId).maybeSingle();
+    if (!appt) throw new Error("Appointment not found");
+    // A technician may only update their own appointments.
+    if (staff.role === "technician" && appt.created_by !== `tech:${staff.staff_id}`) {
+      throw new Error("Forbidden");
+    }
+    const patch: any = { status: data.status };
+    if (data.notes !== undefined) patch.notes = data.notes;
+    const { error } = await supabaseAdmin.from("appointments").update(patch).eq("id", data.appointmentId);
+    if (error) dbError(error, "completeAppointment");
+    return { ok: true };
+  });

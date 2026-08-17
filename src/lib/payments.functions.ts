@@ -156,7 +156,8 @@ export const initiateMpesaStkPush = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    await requireStaff(data.sessionId);
+    // Technicians may never take payments; billing is a reception/admin duty.
+    await gateStaff(data.sessionId, ["admin", "manager", "reception"]);
     const phone = normalizeMsisdn(data.phone);
     let checkoutId = genCheckoutId();
     let live = false;
@@ -377,7 +378,7 @@ export const recordCashPayment = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    await gateStaff(data.sessionId, ["admin", "manager", "technician", "reception"]);
+    await gateStaff(data.sessionId, ["admin", "manager", "reception"]);
     const receiptNo = genReceiptNumber();
     const isCard = data.method === "card";
     const { data: payment, error } = await supabaseAdmin.from("payments").insert({
@@ -451,7 +452,7 @@ export const addPaymentLineItems = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    await gateStaff(data.sessionId, ["admin", "manager", "technician", "reception"]);
+    await gateStaff(data.sessionId, ["admin", "manager", "reception"]);
     const { error } = await (supabaseAdmin as any).from("payment_line_items").insert(
       data.line_items.map((li) => ({
         payment_id: data.payment_id,
