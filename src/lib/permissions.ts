@@ -32,16 +32,20 @@ export const ONBOARDING_TIP: Record<StaffRole, string> = {
   partner: "Welcome, Partner. You have view-only access to reports and audits.",
 };
 
-export type NavKey = "checkin" | "reports" | "tech";
+export type NavKey = "checkin" | "payments" | "reports" | "tech";
 
 export const NAV_BY_ROLE: Record<StaffRole, NavKey[]> = {
-  admin: ["checkin", "reports", "tech"],
+  admin: ["checkin", "payments", "reports", "tech"],
   manager: ["checkin", "reports"],
   technician: ["tech"],
-  reception: ["checkin"],
+  reception: ["checkin", "payments"],
   guardian: ["reports"],
   partner: ["reports"],
 };
+
+/** Roles allowed to take payments. Technicians never bill clients. */
+export const CAN_BILL: StaffRole[] = ["reception", "admin", "manager"];
+
 
 export const CAN = {
   awardJustBecause: (r: StaffRole) => r === "admin",
