@@ -1,10 +1,11 @@
 import { useRouterState } from "@tanstack/react-router";
-import { Users, LayoutDashboard, Smartphone, LogOut, ShieldCheck } from "lucide-react";
+import { Users, LayoutDashboard, Smartphone, LogOut, ShieldCheck, CreditCard } from "lucide-react";
 import { useSession } from "@/lib/session";
 import { NAV_BY_ROLE, ROLE_LABEL, type NavKey } from "@/lib/permissions";
 
 const ITEMS: Record<NavKey, { title: string; url: string; icon: any }> = {
   checkin: { title: "Front Desk",    url: "/concierge/desk", icon: Users },
+  payments:{ title: "Payments",      url: "/reception/payments", icon: CreditCard },
   reports: { title: "Audit & Reports", url: "/guardian/view", icon: LayoutDashboard },
   tech:    { title: "Artisan View",  url: "/artisan/today", icon: Smartphone },
 };
