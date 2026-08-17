@@ -28,7 +28,7 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { useSession } from "@/lib/session";
 import {
-  listFoundersFn, searchClientsForEnrollmentFn, enrollFounderFn, getCircleCapacityFn,
+  listFoundersFn, searchClientsForEnrollmentFn, enrollFounderFn, getCircleCapacityFn, getFounderProfileFn,
 } from "@/lib/founders.functions";
 import { Layout, PageHeader } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -247,52 +247,18 @@ function FounderProfileModal({
   const term = computeTerm(founder);
   const c = founder.clients;
 
-  const { data: perks } = useQuery({
-    queryKey: ["perks", founder.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("perks_usage")
-        .select("*")
-        .eq("founder_id", founder.id);
-      return data ?? [];
-    },
+  const { session } = useSession();
+  const sessionId = session?.sessionId ?? "";
+  const profileFn = useServerFn(getFounderProfileFn);
+  const { data: profile } = useQuery({
+    queryKey: ["founder-profile", sessionId, founder.id],
+    enabled: !!sessionId,
+    queryFn: () => profileFn({ data: { sessionId, founderId: founder.id, clientId: founder.client_id } }),
   });
-
-  const { data: appointments } = useQuery({
-    queryKey: ["founder-appts", founder.client_id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select("*")
-        .eq("client_id", founder.client_id)
-        .order("scheduled_date", { ascending: false });
-      return data ?? [];
-    },
-  });
-
-  const { data: surprises } = useQuery({
-    queryKey: ["founder-surprises", founder.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("surprise_moments_log")
-        .select("*")
-        .eq("founder_id", founder.id)
-        .order("awarded_date", { ascending: false });
-      return data ?? [];
-    },
-  });
-
-  const { data: purchases } = useQuery({
-    queryKey: ["founder-purchases", founder.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("founder_purchases")
-        .select("*, products(name)")
-        .eq("founder_id", founder.id)
-        .order("purchase_date", { ascending: false });
-      return data ?? [];
-    },
-  });
+  const perks = profile?.perks as any[] | undefined;
+  const appointments = profile?.appointments as any[] | undefined;
+  const surprises = profile?.surprises as any[] | undefined;
+  const purchases = profile?.purchases as any[] | undefined;
 
   const counts = useMemo(() => {
     const list = perks ?? [];

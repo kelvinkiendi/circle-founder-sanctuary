@@ -217,3 +217,25 @@ export const enrollFounderFn = createServerFn({ method: "POST" })
 
     return founder;
   });
+
+/** Full founder profile bundle (perks, appointments, surprises, purchases). */
+export const getFounderProfileFn = createServerFn({ method: "POST" })
+  .inputValidator((i) => Session.extend({
+    founderId: z.string().uuid(),
+    clientId: z.string().uuid(),
+  }).parse(i))
+  .handler(async ({ data }) => {
+    await requireStaff(data.sessionId);
+    const [perks, appointments, surprises, purchases] = await Promise.all([
+      supabaseAdmin.from("perks_usage").select("*").eq("founder_id", data.founderId),
+      supabaseAdmin.from("appointments").select("*").eq("client_id", data.clientId).order("scheduled_date", { ascending: false }),
+      supabaseAdmin.from("surprise_moments_log").select("*").eq("founder_id", data.founderId).order("awarded_date", { ascending: false }),
+      supabaseAdmin.from("founder_purchases").select("*, products(name)").eq("founder_id", data.founderId).order("purchase_date", { ascending: false }),
+    ]);
+    return {
+      perks: perks.data ?? [],
+      appointments: appointments.data ?? [],
+      surprises: surprises.data ?? [],
+      purchases: purchases.data ?? [],
+    };
+  });
