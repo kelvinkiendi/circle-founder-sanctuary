@@ -17,7 +17,6 @@ import { FoundersPage } from "@/_archive/routes/founders";
 import { PerksAnalyticsPage } from "@/_archive/routes/perks";
 import { SurprisesPage } from "@/_archive/routes/surprises";
 import { ProductVaultPage } from "@/_archive/routes/products";
-import { BrunchPage } from "@/_archive/routes/brunch";
 import { PaymentsPage } from "@/_archive/routes/payments";
 import { WhatsAppHub } from "@/_archive/routes/whatsapp";
 import { WhatsAppCenter } from "@/components/whatsapp/WhatsAppCenter";
@@ -48,7 +47,6 @@ function DeskShell() {
         ? { id: "surprises", label: "Surprises", render: () => <SurprisesPage /> }
         : null,
       { id: "products", label: "Products", render: () => <ProductVaultPage /> },
-      { id: "brunch", label: "Brunch", render: () => <BrunchPage /> },
       { id: "payments", label: "Payments", render: () => <PaymentsPage /> },
       { id: "whatsapp", label: "WhatsApp", render: () => <WhatsAppHub /> },
       { id: "wa-business", label: "WA Business", render: () => <WhatsAppCenter /> },

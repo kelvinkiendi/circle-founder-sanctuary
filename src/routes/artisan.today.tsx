@@ -57,8 +57,6 @@ function ArtisanScheduler() {
   const { session, logout } = useSession();
   const [sheet, setSheet] = useState<"new" | "block" | null>(null);
   const router = useRouter();
-  const goCheckout = (opts?: { clientId?: string; apptId?: string }) =>
-    router.navigate({ to: "/billing/checkout", search: { clientId: opts?.clientId, apptId: opts?.apptId } as any });
   const [rebookClientId, setRebookClientId] = useState<string | null>(null);
   const [rebookService, setRebookService] = useState<ServiceType | null>(null);
   const techTag = `tech:${session?.staffId ?? ""}`;
@@ -114,7 +112,6 @@ function ArtisanScheduler() {
                 key={a.id}
                 appt={a}
                 onRebook={() => { setRebookClientId(a.client_id); setRebookService(a.appointment_type); setSheet("new"); }}
-                onBill={() => goCheckout({ clientId: a.client_id, apptId: a.id })}
               />
             ))}
           </div>
@@ -142,12 +139,6 @@ function ArtisanScheduler() {
           className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037]/30 rounded-full px-3 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
         >
           <Coffee className="h-3.5 w-3.5" /> Block
-        </button>
-        <button
-          onClick={() => goCheckout()}
-          className="bg-[#F5F5DC] text-[#5D4037] border border-[#5D4037] rounded-full px-4 py-2.5 text-xs font-medium shadow-lg active:scale-95 transition flex items-center gap-1.5"
-        >
-          <Wallet className="h-4 w-4" /> Bill Client
         </button>
         <button
           onClick={() => { setRebookClientId(null); setRebookService(null); setSheet("new"); }}

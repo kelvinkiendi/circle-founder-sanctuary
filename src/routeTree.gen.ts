@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ChangePinRouteImport } from './routes/change-pin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReceptionPaymentsRouteImport } from './routes/reception.payments'
 import { Route as GuardianViewRouteImport } from './routes/guardian.view'
 import { Route as ConciergeDeskRouteImport } from './routes/concierge.desk'
 import { Route as BillingCheckoutRouteImport } from './routes/billing.checkout'
@@ -29,6 +30,11 @@ const ChangePinRoute = ChangePinRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReceptionPaymentsRoute = ReceptionPaymentsRouteImport.update({
+  id: '/reception/payments',
+  path: '/reception/payments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuardianViewRoute = GuardianViewRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/billing/checkout': typeof BillingCheckoutRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
+  '/reception/payments': typeof ReceptionPaymentsRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
   '/api/public/hooks/whatsapp-dispatch': typeof ApiPublicHooksWhatsappDispatchRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/billing/checkout': typeof BillingCheckoutRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
+  '/reception/payments': typeof ReceptionPaymentsRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
   '/api/public/hooks/whatsapp-dispatch': typeof ApiPublicHooksWhatsappDispatchRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/billing/checkout': typeof BillingCheckoutRoute
   '/concierge/desk': typeof ConciergeDeskRoute
   '/guardian/view': typeof GuardianViewRoute
+  '/reception/payments': typeof ReceptionPaymentsRoute
   '/api/public/hooks/visit-reminders-21d': typeof ApiPublicHooksVisitReminders21dRoute
   '/api/public/hooks/whatsapp-dispatch': typeof ApiPublicHooksWhatsappDispatchRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/billing/checkout'
     | '/concierge/desk'
     | '/guardian/view'
+    | '/reception/payments'
     | '/api/public/hooks/visit-reminders-21d'
     | '/api/public/hooks/whatsapp-dispatch'
     | '/api/public/mpesa/callback'
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/billing/checkout'
     | '/concierge/desk'
     | '/guardian/view'
+    | '/reception/payments'
     | '/api/public/hooks/visit-reminders-21d'
     | '/api/public/hooks/whatsapp-dispatch'
     | '/api/public/mpesa/callback'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/billing/checkout'
     | '/concierge/desk'
     | '/guardian/view'
+    | '/reception/payments'
     | '/api/public/hooks/visit-reminders-21d'
     | '/api/public/hooks/whatsapp-dispatch'
     | '/api/public/mpesa/callback'
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   BillingCheckoutRoute: typeof BillingCheckoutRoute
   ConciergeDeskRoute: typeof ConciergeDeskRoute
   GuardianViewRoute: typeof GuardianViewRoute
+  ReceptionPaymentsRoute: typeof ReceptionPaymentsRoute
   ApiPublicHooksVisitReminders21dRoute: typeof ApiPublicHooksVisitReminders21dRoute
   ApiPublicHooksWhatsappDispatchRoute: typeof ApiPublicHooksWhatsappDispatchRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
@@ -190,6 +203,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reception/payments': {
+      id: '/reception/payments'
+      path: '/reception/payments'
+      fullPath: '/reception/payments'
+      preLoaderRoute: typeof ReceptionPaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guardian/view': {
@@ -266,6 +286,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillingCheckoutRoute: BillingCheckoutRoute,
   ConciergeDeskRoute: ConciergeDeskRoute,
   GuardianViewRoute: GuardianViewRoute,
+  ReceptionPaymentsRoute: ReceptionPaymentsRoute,
   ApiPublicHooksVisitReminders21dRoute: ApiPublicHooksVisitReminders21dRoute,
   ApiPublicHooksWhatsappDispatchRoute: ApiPublicHooksWhatsappDispatchRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
