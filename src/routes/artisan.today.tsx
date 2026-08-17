@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -56,7 +56,6 @@ const BLOCKED_REASONS = ["Lunch Break", "Personal Appointment", "Sick Leave", "T
 function ArtisanScheduler() {
   const { session, logout } = useSession();
   const [sheet, setSheet] = useState<"new" | "block" | null>(null);
-  const router = useRouter();
   const [rebookClientId, setRebookClientId] = useState<string | null>(null);
   const [rebookService, setRebookService] = useState<ServiceType | null>(null);
   const techTag = `tech:${session?.staffId ?? ""}`;
@@ -218,7 +217,7 @@ function CollectionSummary({ techTag, today }: { techTag: string; today: string 
 }
 
 // ============ Appointment Card ============
-function ApptCard({ appt, onRebook, onBill, compact }: { appt: any; onRebook: () => void; onBill?: () => void; compact?: boolean }) {
+function ApptCard({ appt, onRebook, onComplete, compact }: { appt: any; onRebook: () => void; onComplete?: (id: string) => void; compact?: boolean }) {
   const meta = SERVICE_META[appt.appointment_type as ServiceType];
   const isBlock = String(appt.notes ?? "").startsWith("[BLOCK]");
   return (
@@ -247,9 +246,9 @@ function ApptCard({ appt, onRebook, onBill, compact }: { appt: any; onRebook: ()
             <button onClick={onRebook} className="text-[10px] uppercase tracking-wider text-[#5D4037] flex items-center gap-1 px-2 py-1 rounded hover:bg-[#5D4037]/5">
               <Repeat className="h-3 w-3" /> Rebook
             </button>
-            {onBill && (
-              <button onClick={onBill} className="text-[10px] uppercase tracking-wider text-[#F5F5DC] bg-[#5D4037] flex items-center gap-1 px-2 py-1 rounded">
-                <Wallet className="h-3 w-3" /> Bill
+            {onComplete && appt.status !== "completed" && (
+              <button onClick={() => onComplete(appt.id)} className="text-[10px] uppercase tracking-wider text-[#F5F5DC] bg-[#5D4037] flex items-center gap-1 px-2 py-1 rounded">
+                <CheckCircle2 className="h-3 w-3" /> Complete
               </button>
             )}
           </div>
